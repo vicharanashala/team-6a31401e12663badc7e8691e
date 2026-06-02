@@ -1,10 +1,9 @@
-//CREATE CURD APIS 
 const Question = require('../models/questionModel');
 
-const getAllQuestions = async (req, res) => {
+const getAllQuestions = async (req, res) => {//gets all the questions from DB
     try {
 
-        const questions = await Question.find()
+        const questions = await Question.find()//fetch every question
             .populate('user_id', 'name')
             .populate('tag_id', 'tag_name');
 
@@ -19,7 +18,7 @@ const getAllQuestions = async (req, res) => {
     }
 };
 
-const getQuestionById = async (req, res) => {
+const getQuestionById = async (req, res) => {//get one question using its ID
     try {
         const question = await Question.findById(req.params.id);
 
@@ -35,7 +34,7 @@ const getQuestionById = async (req, res) => {
 
 
 //cleaner one
-const createQuestion = async (req, res) => {
+const createQuestion = async (req, res) => {//creates question
     try {
         const { question, user_id, tag_id } = req.body;
 
@@ -75,7 +74,7 @@ const createQuestion = async (req, res) => {
 //     }
 // };
 
-// UPDATE QUESTION
+// UPDATE QUESTION (EXISTING ones)
 const updateQuestion = async (req, res) => {
     try {
         const question = await Question.findByIdAndUpdate(
@@ -173,6 +172,8 @@ const downvoteQuestion = async (req, res) => {
 //     }
 // };
 
+
+//created by that particular user
 const getQuestionsByUser = async (req, res) => {
     try {
         const questions = await Question.find({
@@ -185,6 +186,8 @@ const getQuestionsByUser = async (req, res) => {
     }
 };
 
+
+//by tag
 const getQuestionsByTag = async (req, res) => {
     try {
         const questions = await Question.find({
