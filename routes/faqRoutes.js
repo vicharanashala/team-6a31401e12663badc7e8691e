@@ -3,23 +3,23 @@ const router = express.Router();
 const {
   getAllFAQs,
   getFAQById,
-  createFAQ,
+  searchFAQs,
+  convertToFAQ,
   updateFAQ,
   deleteFAQ,
-  approveFAQ,
-  getFAQsByTag
+  getQuestionsReadyForFAQ,
 } = require('../controllers/faqController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Public routes
+// PUBLIC ROUTES
 router.get('/', getAllFAQs);
 router.get('/:id', getFAQById);
-router.get('/tags/:tagId', getFAQsByTag);
+router.get('/search', searchFAQs);
 
-// Protected routes
-router.post('/', protect, authorize('moderator', 'admin'), createFAQ);
-router.put('/:id', protect, authorize('moderator', 'admin'), updateFAQ);
+// PROTECTED ROUTES
+router.put('/:id', protect, authorize('admin'), updateFAQ);
 router.delete('/:id', protect, authorize('admin'), deleteFAQ);
-router.put('/:id/approve', protect, authorize('moderator', 'admin'), approveFAQ);
+router.post('/convert/:questionId', protect, authorize('admin'), convertToFAQ);
+router.get('/admin/ready-questions', protect, authorize('admin'), getQuestionsReadyForFAQ);
 
 module.exports = router;

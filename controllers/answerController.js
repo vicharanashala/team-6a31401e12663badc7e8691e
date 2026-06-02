@@ -106,7 +106,7 @@ const updateAnswer = async (req, res) => {
         }
 
         // CHECK IF USER IS OWNER OF ANSWER OR ADMIN - ONLY THEY CAN UPDATE
-        if(answer.user_id.to_String() !== req.user_id && req.user_role !== 'admin') {
+        if(answer.user_id.toString() !== req.user_id && req.user_role !== 'admin') {
             return res.status(403).json({
                 success : false,
                 message : 'User not authorized to update this answer'
