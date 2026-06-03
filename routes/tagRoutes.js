@@ -6,18 +6,16 @@ const {
   createTag,
   updateTag,
   deleteTag,
-  getPopularTags
 } = require('../controllers/tagController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// Public routes
+// PUBLIC ROUTES
 router.get('/', getAllTags);
-router.get('/popular', getPopularTags);
 router.get('/:id', getTagById);
 
-// Protected routes (only moderators/admins can manage tags)
-router.post('/', protect, authorize('moderator', 'admin'), createTag);
-router.put('/:id', protect, authorize('moderator', 'admin'), updateTag);
+// PROTECTED ROUTES
+router.post('/', protect, authorize('admin'), createTag);
+router.put('/:id', protect, authorize('admin'), updateTag);
 router.delete('/:id', protect, authorize('admin'), deleteTag);
 
 module.exports = router;
