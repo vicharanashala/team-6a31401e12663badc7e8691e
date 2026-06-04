@@ -1,72 +1,85 @@
-const Question = require("../models/questionModel");
-const { pipeline } = require("@xenova/transformers");
+const FAQ = require('../models/faqModel');
 
-let embedder;
-
-// load model once
-const loadModel = async () => {
-    if (!embedder) {
-        embedder = await pipeline(
-            "feature-extraction",
-            "Xenova/all-MiniLM-L6-v2"
-        );
-    }
-};
-
-// cosine similarity
-const cosineSimilarity = (a, b) => {
-    let dot = 0;
-    let magA = 0;
-    let magB = 0;
-
-    for (let i = 0; i < a.length; i++) {
-        dot += a[i] * b[i];
-        magA += a[i] * a[i];
-        magB += b[i] * b[i];
-    }
-
-    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
-};
-
-// SEARCH QUESTIONS
-const searchQuestions = async (req, res) => {
+const searchFAQs = async (req, res) => {
     try {
-        await loadModel();
+        const { q, tag, limit = 10 } = req.query;
 
-        const { query } = req.body;
+        // SEARCH FILTER
+        let filter = {};
 
-        const queryEmbedding = await embedder(query, { pooling: "mean", normalize: true });
-
-        const questions = await Question.find();
-
-        let results = [];
-
-        for (let q of questions) {
-            const qEmbedding = await embedder(q.question, { pooling: "mean", normalize: true });
-
-            const score = cosineSimilarity(
-                Array.from(queryEmbedding.data),
-                Array.from(qEmbedding.data)
-            );
-
-            results.push({
-                question: q,
-                score
-            });
+        // SEARCH TEXT PROVIDED - SIMPLE KEYWORD MATCHING, CASE INSENSITIVE
+        if(q && q.trim()) {
+            filter.question = {
+                $regex : q.trim(),
+                $options : 'i'
+            };
         }
 
-        results.sort((a, b) => b.score - a.score);
+        // ADD TAG IF PROVIDED
+        if(tag && tag.trim()) {
+            filter.tag = tag.trim().toLowerCase();
+        }
 
-        res.json(results.slice(0, 5));
+        // EXECUTE SEARCH - RETURN ALPHABETICALLY
+        const faqs = await FAQ.find(filter)
+            .select('question answer tag')
+            .sort({ question : 1 })
+            .limit(parseInt(limit));
 
-    } catch (error) {
+        // CALCULATE RELEVANCE SCORE
+        const resultsWithScore = faqs.map(faq => {
+            let score = 0;
+
+            if(q && q.trim()) {
+                const searchTerm = q.trim().toLowerCase();
+                const questionText = faq.question.toLowerCase();
+
+                // EXACT MATCH GET HIGHEST SCORE
+                if(questionText === searchTerm) {
+                    score = 100;
+                }
+
+                // CONTAINS PHRASE GET HIGH SCORE
+                else if(questionText.includes(searchTerm)) {
+                    score = 80;
+                }
+
+                // NOW WORD-BY-WORD MATCHING
+                else {
+                    const words = searchTerm.split(' ');
+                    let matchCount = 0;
+                    words.forEach(word => {
+                        if(questionText.includes(word)) {
+                            matchCount++;
+                        }
+                    });
+                    score = (matchCount / words.length) * 60;
+                }
+            } else {
+                score = 50;
+            }
+            return {
+                ...faq.toObject(),
+                relevance_score : Math.round(score)
+            };
+        });
+
+        // SORT BY RELEVANCE SCORE
+        resultsWithScore.sort((a, b) => b.relevance_score - a.relevance_score);
+
+        res.status(200).json({
+            success : true,
+            searchQuery : q || null,
+            tagFilter : tag || null,
+            count : resultsWithScore.length,
+            data : resultsWithScore
+        });
+    } catch (err) {
         res.status(500).json({
-            success: false,
-            message: error.message
+            success : false,
+            message : err.message
         });
     }
 };
 
-module.exports = {
-    searchQuestions
-};
+module.exports = { searchFAQs };
