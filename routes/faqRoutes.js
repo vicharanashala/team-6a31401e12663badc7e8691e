@@ -9,7 +9,7 @@ const {
   deleteFAQ,
   getQuestionsReadyForFAQ,
 } = require('../controllers/faqController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // PUBLIC ROUTES
 router.get('/', getAllFAQs);

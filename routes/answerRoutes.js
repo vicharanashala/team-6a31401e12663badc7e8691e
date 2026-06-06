@@ -10,7 +10,7 @@ const {
   upvoteAnswer,
   downvoteAnswer
 } = require('../controllers/answerController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middlewares/authMiddleware');
 
 // PUBLIC ROUTES
 router.get('/question/:questionId', getAnswersByQuestion);

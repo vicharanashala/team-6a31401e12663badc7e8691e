@@ -11,7 +11,7 @@ const {
   upvoteQuestion,
   downvoteQuestion
 } = require('../controllers/questionController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middlewares/authMiddleware');
 
 // PUBLIC ROUTES
 router.get('/', getAllQuestions);

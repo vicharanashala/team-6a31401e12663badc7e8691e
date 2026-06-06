@@ -4,7 +4,7 @@ const router = express.Router();
 const {
     register,
     login
-} = require('../middleware/authMiddleware');
+} = require('../middlewares/authMiddleware');
 
 router.post('/register', register);
 router.post('/login', login);

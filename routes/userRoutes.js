@@ -8,7 +8,7 @@ const {
   updateUserRole,
   getUserStats
 } = require('../controllers/userController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // PUBLIC ROUTES
 router.get('/:id', getUserById);
