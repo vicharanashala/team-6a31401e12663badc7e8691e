@@ -1,35 +1,51 @@
 @import './fonts.css';
 
+/* ===== Light mode variables (default) ===== */
 :root {
-  --background: #ffffff;
-  --foreground: #111111;
-  --primary: #0070f3;
-  --primary-hover: #005cc1;
-  --primary-foreground: #ffffff;
-  --primary-bg: rgba(0, 112, 243, 0.1);
-  --border: #e5e5e5;
-  --card: #ffffff;
-  --muted-foreground: #666666;
-  --input-background: #ffffff;
-  --secondary-bg: #f5f5f5;
+  /* Colors from your constants */
+  --accent: #3a86dd;
+  --accent-light: #E1F5EE;
+  --accent-dark: #0814ba;
+  --amber: #BA7517;
+  --amber-light: #FAEEDA;
+  --red: #A32D2D;
+  --red-light: #FCEBEB;
+  --blue: #76b4f1;
+  --blue-light: #E6F1FB;
+  --purple: #5143f0;
+  --purple-light: #EEEDFE;
+
+  /* Neutral / UI */
+  --border-light: #e5e5e0;
+  --border-gray: #ddd;
+  --bg-white: #ffffff;
+  --bg-offwhite: #fafaf8;
+  --text-dark: #222;
+  --text-muted: #555;
+  --text-light: #888;
+  --text-placeholder: #aaa;
+  --shadow-fab: 0 4px 16px rgba(0,0,0,0.15);
+
+  /* Font family */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary: #3291ff;
-    --primary-hover: #2281ef;
-    --primary-foreground: #ffffff;
-    --primary-bg: rgba(50, 145, 255, 0.1);
-    --border: #272727;
-    --card: #0a0a0a;
-    --muted-foreground: #999999;
-    --input-background: #111111;
-    --secondary-bg: #141414;
-  }
+.dark {
+  --bg-white: #0f0f0f;
+  --bg-offwhite: #161616;
+  --text-dark: #efefef;
+  --text-muted: #aaa;
+  --text-light: #777;
+  --text-placeholder: #555;
+  --border-light: #2a2a2a;
+  --border-gray: #3a3a3a;
+  --accent: #fa8218;
+  --accent-light: rgba(50, 145, 255, 0.1);
+  --accent-dark: #ef5c22;
+  --shadow-fab: 0 4px 16px rgba(0,0,0,0.4);
 }
 
+/* Base reset */
 * {
   margin: 0;
   padding: 0;
@@ -38,10 +54,11 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-white);
+  color: var(--text-dark);
 }
 
 .app-container {
