@@ -1,14 +1,11 @@
-/* src/pages/HomePage.css */
 @import '../styles/globals.css';
 
-/* ===== Layout ===== */
 .home-page {
   min-height: 100vh;
   background: var(--bg-white);
   color: var(--text-dark);
 }
 
-/* ===== Header ===== */
 .home-page__header {
   border-bottom: 1px solid var(--border-light);
   position: sticky;
@@ -89,8 +86,6 @@
   background: var(--accent-dark);
 }
 
-/* HomePage.css – add these lines */
-
 .home-page__theme-toggle {
   border: 1px solid var(--border-light);
   padding: 0.5rem;
@@ -147,7 +142,6 @@
   color: var(--accent);
 }
 
-/* ===== Hero ===== */
 .home-page__hero {
   max-width: 896px;
   margin: 0 auto;
@@ -177,7 +171,6 @@
   max-width: 36rem;
 }
 
-/* ===== Category Filters ===== */
 .home-page__filters {
   max-width: 896px;
   margin: 0 auto;
@@ -214,14 +207,12 @@
   background: rgba(29, 158, 117, 0.1);
 }
 
-/* ===== Main content ===== */
 .home-page__main {
   max-width: 896px;
   margin: 0 auto;
   padding: 0 1.5rem 4rem;
 }
 
-/* FAQ List */
 .home-page__faq-list {
   border: 1px solid var(--border-light);
   border-radius: 0.5rem;
@@ -322,7 +313,6 @@
   margin-bottom: 1rem;
 }
 
-/* Empty state */
 .home-page__empty {
   border: 1px dashed var(--border-light);
   padding: 4rem 0;
@@ -349,7 +339,6 @@
   cursor: pointer;
 }
 
-/* Call to action */
 .home-page__cta {
   text-align: center;
   margin-top: 2rem;
@@ -379,7 +368,6 @@
   background: var(--accent-dark);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .home-page__header-container {
     flex-wrap: wrap;

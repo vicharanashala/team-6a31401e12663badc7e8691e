@@ -1,8 +1,6 @@
 @import './fonts.css';
 
-/* ===== Light mode variables (default) ===== */
 :root {
-  /* Colors from your constants */
   --accent: #3a86dd;
   --accent-light: #E1F5EE;
   --accent-dark: #0814ba;
@@ -15,7 +13,6 @@
   --purple: #5143f0;
   --purple-light: #EEEDFE;
 
-  /* Neutral / UI */
   --border-light: #e5e5e0;
   --border-gray: #ddd;
   --bg-white: #ffffff;
@@ -26,7 +23,6 @@
   --text-placeholder: #aaa;
   --shadow-fab: 0 4px 16px rgba(0,0,0,0.15);
 
-  /* Font family */
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -45,7 +41,6 @@
   --shadow-fab: 0 4px 16px rgba(0,0,0,0.4);
 }
 
-/* Base reset */
 * {
   margin: 0;
   padding: 0;

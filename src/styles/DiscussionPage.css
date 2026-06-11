@@ -1,14 +1,11 @@
-/* src/pages/DiscussionPage.css */
 @import '../styles/globals.css';
 
-/* ===== Layout ===== */
 .discussion-page {
   min-height: 100vh;
   background: var(--bg-white);
   color: var(--text-dark);
 }
 
-/* ===== Header ===== */
 .discussion-page__header {
   border-bottom: 1px solid var(--border-light);
   position: sticky;
@@ -94,14 +91,12 @@
   height: 0.875rem;
 }
 
-/* ===== Main container ===== */
 .discussion-page__main {
   max-width: 896px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
 }
 
-/* ===== New Question Form ===== */
 .question-form {
   border: 1px solid rgba(29, 158, 117, 0.5);
   background: var(--bg-white);
@@ -185,14 +180,12 @@
   font-family: inherit;
 }
 
-/* Tag selector container */
 .tag-selector {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-/* Base button style */
 .tag-selector__btn {
   font-size: 11px;
   font-family: 'JetBrains Mono', monospace;
@@ -204,13 +197,11 @@
   transition: all 0.2s ease;
 }
 
-/* Hover state (not selected) */
 .tag-selector__btn:hover:not(.tag-selector__btn--selected) {
   border-color: var(--text-dark);
   color: var(--text-dark);
 }
 
-/* Selected state */
 .tag-selector__btn--selected {
   border-color: var(--accent);
   color: var(--accent);
@@ -221,7 +212,7 @@
   font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
   color: var(--text-muted);
-  margin-top: 0.5rem;   /* equivalent to mt-2 (0.5rem = 8px) */
+  margin-top: 0.5rem;   
 }
 
 .question-form__actions {
@@ -270,7 +261,6 @@
   cursor: not-allowed;
 }
 
-/* ===== Questions header ===== */
 .discussion-page__questions-header {
   display: flex;
   justify-content: space-between;
@@ -358,14 +348,12 @@
   background: rgba(29, 158, 117, 0.1);
 }
 
-/* ===== Questions list ===== */
 .discussion-page__questions-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-/* Question Card */
 .question-card {
   border: 1px solid var(--border-light);
   background: var(--bg-white);
@@ -457,7 +445,6 @@
   height: 0.75rem;
 }
 
-/* Vote group inside question meta */
 .question-card__vote-group {
   display: inline-flex;
   align-items: center;
@@ -492,7 +479,6 @@
   height: 0.875rem;
 }
 
-/* Expanded section */
 .question-card__expanded {
   border-top: 1px solid var(--border-light);
 }
@@ -509,7 +495,6 @@
   margin: 0;
 }
 
-/* Answers list inside a question */
 .answers-list {
   border-top: 1px solid var(--border-light);
   border-bottom: 1px solid var(--border-light);
@@ -592,7 +577,6 @@
   color: var(--text-muted);
 }
 
-/* Answer form */
 .answer-form {
   padding: 1rem 1.25rem;
   background: rgba(0, 0, 0, 0.02);
@@ -646,7 +630,6 @@
   cursor: not-allowed;
 }
 
-/* ===== Responsive ===== */
 @media (max-width: 768px) {
   .discussion-page__header-container {
     flex-direction: column;
