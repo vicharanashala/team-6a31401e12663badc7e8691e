@@ -1,7 +1,24 @@
-// src/pages/DiscussionPage.jsx
+/**
+ * DISCUSSION PAGE COMPONENT - COMMUNITY DISCUSSION PAGE WHERE USERS CAN ASK QUESTIONS, POST ANSWERS AND VOTE.
+ * 
+ * Features:
+ * - View list of questions.
+ * - Expand a question to see its body, answers, and a form to add your own answer.
+ * - Vote on questions and individual answers.
+ * - Create a new question with title, body, and tags.
+ */
+
 import { useState } from "react";
-import { ChevronUp, ChevronDown, MessageSquare, ArrowLeft, Plus, X, BluetoothConnected } from "lucide-react";
+import { ChevronUp, ChevronDown, MessageSquare, ArrowLeft, Plus, X } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 import "../styles/DiscussionPage.css";
+
+// HELPER FUNCTION - RETURN A CSS CLASS NAME BASED ON UPVOTE COUNT
+function getHeatClass(upvotes) {
+  if (upvotes >= 20) return "question-card--hot";
+  if (upvotes >= 10) return "question-card--warm";
+  return "";
+}
 
 const AVAILABLE_TAGS = ["account", "security", "general", "meta", "feature", "notifications", "voting", "moderation", "bug", "help"];
 
@@ -79,8 +96,11 @@ const INITIAL_QUESTIONS = [
   },
 ];
 
-export default function DiscussionPage({ onNavigate }) {
+export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
+
+  // STATE MANAGEMENT
   const [questions, setQuestions] = useState(INITIAL_QUESTIONS);
+  const [voteBursts, setVoteBursts] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
@@ -96,6 +116,9 @@ export default function DiscussionPage({ onNavigate }) {
     { value: "downvotes", label: "Most Downvotes" },
   ];
 
+  // HELPER FUNCTIONS
+
+  // FUNCTION THAT RETURN QUESTIONS ARRAY ACCORDING TO CURRENT SORTING SETTING
   function getSorted() {
     const qs = [...questions];
     if (sortBy === "upvotes")
@@ -105,16 +128,39 @@ export default function DiscussionPage({ onNavigate }) {
     return qs.sort((a, b) => b.id - a.id);
   }
 
+  // FUNCTION THAT TOGGLE EXPANDED STATE OF QUESTION 
   function toggleExpand(id) {
     setQuestions((qs) =>
       qs.map((q) => (q.id === id ? { ...q, expanded: !q.expanded } : q))
     );
   }
 
+  // FUNCTION THAT SHOWS TEMPORARY +1 BURST ANIMATION
+  function triggerBurst(id) {
+    setVoteBursts((prev) => ({ ...prev, [id]: Date.now() }));
+    setTimeout(() => {
+      setVoteBursts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, 700);
+  }
+
+  // VOTE ON A QUESTION - WITH CONDITIONS
   function voteQuestion(id, direction) {
+    if (direction === "up") {
+      const q = questions.find((item) => item.id === id);
+      if (!q || q.userVote !== "up") {
+        triggerBurst(id);
+      }
+    }
     setQuestions((qs) =>
       qs.map((q) => {
         if (q.id !== id) return q;
+
+        // IF USER CLICKS THE SAME DIRECTION AGAIN - REMOVE VOTES
+
         if (q.userVote === direction) {
           return {
             ...q,
@@ -127,6 +173,9 @@ export default function DiscussionPage({ onNavigate }) {
                 : q.downvotes,
           };
         }
+
+        // OTHERWISE, APPLY THE VOTE AND REMOVE THE OPPOSITE VOTE
+
         return {
           ...q,
           userVote: direction,
@@ -147,7 +196,13 @@ export default function DiscussionPage({ onNavigate }) {
     );
   }
 
+  // UPVOTE AN ANSWER FUNCTION
   function upvoteAnswer(qId, aId) {
+    const question = questions.find((q) => q.id === qId);
+    const answer = question?.answers.find((a) => a.id === aId);
+    if (answer && !answer.hasVoted) {
+      triggerBurst(`ans-${qId}-${aId}`);
+    }
     setQuestions((qs) =>
       qs.map((q) =>
         q.id === qId
@@ -164,6 +219,7 @@ export default function DiscussionPage({ onNavigate }) {
     );
   }
 
+  // SUBMIT A NEW ANSWER FUNCTION 
   function submitAnswer(qId) {
     const text = (answerText[qId] || "").trim();
     if (!text) return;
@@ -191,6 +247,7 @@ export default function DiscussionPage({ onNavigate }) {
     setAnswerText((prev) => ({ ...prev, [qId]: "" }));
   }
 
+  // TOGGLE A TAG IN NEW QUESTION - ADD OR REMOVE
   function toggleTag(tag) {
     setNewTags((prev) =>
       prev.includes(tag)
@@ -199,6 +256,7 @@ export default function DiscussionPage({ onNavigate }) {
     );
   }
 
+  // SUBMIT A NEW QUESTION FUNCTION
   function submitQuestion() {
     if (!newTitle.trim()) return;
     const q = {
@@ -222,34 +280,53 @@ export default function DiscussionPage({ onNavigate }) {
     setShowForm(false);
   }
 
+  // RENDER DOM
   return (
     <div className="discussion-page">
+
+      {/* HEADER SECTION WITH BACK BUTTON, LOGO, THEME TOGGLE AND NEW QUESTION BUTTON */}
+
       <header className="discussion-page__header">
         <div className="discussion-page__header-container">
           <div className="discussion-page__header-left">
+
+            {/* BACK BUTTON */}
+
             <button
               onClick={() => onNavigate("home")}
               className="discussion-page__back-btn"
             >
               <ArrowLeft className="discussion-page__back-icon" />
             </button>
+
+            {/* LOGO OF THE PLATFORM */}
+
             <span className="discussion-page__logo">
               VINS<span className="discussion-page__logo-highlight"> FAQ SERVER</span>
             </span>
             <span className="discussion-page__header-badge">/ DISCUSSION</span>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="discussion-page__new-question-btn"
-          >
-            <Plus className="discussion-page__new-question-icon" />
-            New Question
-          </button>
+
+          {/* THEME TOGGLE BUTTON AND ADD NEW QUESTION BUTTON */}
+
+          <div className="discussion-page__header-right">
+            <ThemeToggle dark={dark} onToggle={onToggleTheme} />
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="discussion-page__new-question-btn"
+            >
+              <Plus className="discussion-page__new-question-icon" />
+              New Question
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="discussion-page__main">
-        {/* New Question Form */}
+
+        {/* NEW QUESTION FORM - INLINE SECTION */}
+
         {showForm && (
           <div className="question-form">
             <div className="question-form__header">
@@ -263,6 +340,9 @@ export default function DiscussionPage({ onNavigate }) {
             </div>
 
             <div className="question-form__body">
+              
+              {/* TITLE FIELD */}
+              
               <div className="question-form__field">
                 <label className="question-form__label">TITLE *</label>
                 <input
@@ -274,6 +354,8 @@ export default function DiscussionPage({ onNavigate }) {
                 />
               </div>
 
+              {/* BODY FIELD */}
+
               <div className="question-form__field">
                 <label className="question-form__label">DETAILS</label>
                 <textarea
@@ -284,6 +366,8 @@ export default function DiscussionPage({ onNavigate }) {
                   className="question-form__textarea"
                 />
               </div>
+
+              {/* TAG SELECTION */}
 
               <div className="question-form__field">
                 <label className="question-form__label">TAGS</label>
@@ -309,6 +393,8 @@ export default function DiscussionPage({ onNavigate }) {
                 )}
               </div>
 
+              {/* FORM ACTIONS - CANCEL OR POST BUTTONS */}
+
               <div className="question-form__actions">
                 <button
                   onClick={() => setShowForm(false)}
@@ -328,7 +414,8 @@ export default function DiscussionPage({ onNavigate }) {
           </div>
         )}
 
-        {/* Questions header */}
+        {/* QUESTIONS HEADER - COUNT AND SORT DROPDOWN */}
+
         <div className="discussion-page__questions-header">
           <p className="discussion-page__questions-count">
             {questions.length} QUESTIONS
@@ -343,6 +430,8 @@ export default function DiscussionPage({ onNavigate }) {
                 className={`discussion-page__sort-chevron ${sortOpen ? "discussion-page__sort-chevron--open" : ""}`}
               />
             </button>
+
+            {/* SORTING OPTIONS */}
 
             {sortOpen && (
               <div className="discussion-page__sort-dropdown">
@@ -366,17 +455,31 @@ export default function DiscussionPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Questions list */}
+        {/* LIST OF QUESTIONS - BASED UPON SORTING SETTING */}
+
         <div className="discussion-page__questions-list">
-          {getSorted().map((q) => (
-            <div key={q.id} className="question-card">
+          {getSorted().map((q, index) => (
+            <div 
+              key={q.id} 
+              className={`question-card ${getHeatClass(q.upvotes)} ${q.expanded ? "question-card--expanded" : ""}`}
+              style={{ animationDelay : `${index * 0.06}s` }}
+            >
+
+              {/* QUESTION COLLAPSE BUTTON - CLICK TO EXPAND AND CLOSE */}
+
               <button
                 className="question-card__trigger"
                 onClick={() => toggleExpand(q.id)}
               >
+
+                {/* AVATOR OF USER WHO ASKED QUESTION */}
+
                 <div className="question-card__avatar">
                   <span className="question-card__avatar-text">{q.avatar}</span>
                 </div>
+
+                {/* TITLE OF THE QUESTION WITH ASSOCIATED TAGS AND USER NAME*/}
+
                 <div className="question-card__content">
                   <p className="question-card__title">{q.title}</p>
                   <div className="question-card__meta">
@@ -390,11 +493,16 @@ export default function DiscussionPage({ onNavigate }) {
                       <MessageSquare className="question-card__answers-icon" />
                       {q.answers.length}
                     </span>
+
+                    {/* VOTING BUTTONS FOR QUESTIONS - UPVOTE AND DOWNVOTE*/}
+
                     <span className="question-card__vote-group" onClick={(e) => e.stopPropagation()}>
                       <button
+                        type="button"
                         onClick={() => voteQuestion(q.id, "up")}
                         className={`question-card__vote-btn ${q.userVote === "up" ? "question-card__vote-btn--up-active" : ""}`}
                       >
+                        {voteBursts[q.id] && <span className="vote-burst">+1</span>}
                         <ChevronUp className="question-card__vote-icon" />
                         {q.upvotes}
                       </button>
@@ -410,13 +518,20 @@ export default function DiscussionPage({ onNavigate }) {
                 </div>
               </button>
 
+              {/* EXPANDED VIEW OF QUESTION - SHOWS BODY, ANSWERS AND ANSWER FORM */}
+
               {q.expanded && (
                 <div className="question-card__expanded">
+
+                  {/* QUESTION BODY */}
+
                   {q.body && (
                     <div className="question-card__body">
                       <p className="question-card__body-text">{q.body}</p>
                     </div>
                   )}
+
+                  {/* LIST OF ASSOCIATED ANSWERS - SORTED BY VOTES DESCENDING */}
 
                   {q.answers.length > 0 && (
                     <div className="answers-list">
@@ -426,15 +541,25 @@ export default function DiscussionPage({ onNavigate }) {
                         .map((ans) => (
                           <div key={ans.id} className="answer-item">
                             <div className="answer-item__vote">
+
+                              {/* BUTTON TO UPVOTE ANSWER */}
+
                               <button
+                                type="button"
                                 onClick={() => upvoteAnswer(q.id, ans.id)}
                                 disabled={ans.hasVoted}
                                 className={`answer-item__vote-btn ${
                                   ans.hasVoted ? "answer-item__vote-btn--voted" : ""
                                 }`}
                               >
+                                {voteBursts[`ans-${q.id}-${ans.id}`] && (
+                                  <span className="vote-burst">+1</span>
+                                )}
                                 <ChevronUp className="answer-item__vote-icon" />
                               </button>
+
+                              {/* TOTAL UPVOTES ON ANSWER */}
+
                               <span
                                 className={`answer-item__vote-count ${
                                   ans.hasVoted ? "answer-item__vote-count--voted" : ""
@@ -443,6 +568,9 @@ export default function DiscussionPage({ onNavigate }) {
                                 {ans.votes}
                               </span>
                             </div>
+
+                            {/* ANSWER TEXT AND ASSOCIATED AUTHOR */}
+
                             <div className="answer-item__content">
                               <p className="answer-item__text">{ans.text}</p>
                               <p className="answer-item__meta">
@@ -454,8 +582,13 @@ export default function DiscussionPage({ onNavigate }) {
                     </div>
                   )}
 
+                  {/* FORM TO ADD A NEW ANSWER */}
+
                   <div className="answer-form">
                     <p className="answer-form__label">YOUR ANSWER</p>
+
+                    {/* TEXT AREA FOR ANSWER */}
+
                     <textarea
                       rows={3}
                       placeholder="Write a clear, helpful answer..."
@@ -468,6 +601,9 @@ export default function DiscussionPage({ onNavigate }) {
                       }
                       className="answer-form__textarea"
                     />
+
+                    {/* ANSWER SUBMIT BUTTON */}
+
                     <button
                       onClick={() => submitAnswer(q.id)}
                       disabled={!(answerText[q.id] || "").trim()}

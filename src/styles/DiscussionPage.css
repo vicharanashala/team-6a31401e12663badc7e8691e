@@ -655,3 +655,110 @@
     align-items: center;
   }
 }
+
+/* === Neon UI enhancements === */
+.discussion-page {
+  background: var(--bg-base);
+}
+
+.discussion-page__header {
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.discussion-page__header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.discussion-page__logo {
+  animation: logo-flicker 10s infinite;
+  text-shadow: 0 0 16px var(--accent-light);
+}
+
+.discussion-page__new-question-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #06060f;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+  transition: all var(--transition-base);
+}
+
+.discussion-page__new-question-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(0, 240, 255, 0.45);
+}
+
+.question-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+  transition: all var(--transition-base);
+  animation: faq-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.question-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--border-glow);
+}
+
+.question-card--warm {
+  border-color: color-mix(in srgb, var(--neon-amber) 40%, var(--border-light));
+}
+
+.question-card--hot {
+  border-color: color-mix(in srgb, var(--neon-magenta) 50%, var(--border-light));
+  box-shadow: 0 0 20px rgba(255, 45, 149, 0.12);
+}
+
+.question-card--expanded {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px var(--accent-light);
+}
+
+.question-card__vote-btn {
+  position: relative;
+  overflow: visible;
+}
+
+.question-card__vote-btn--up-active {
+  color: var(--neon-lime) !important;
+  text-shadow: 0 0 8px var(--neon-lime);
+}
+
+.question-card__tag {
+  transition: all var(--transition-fast);
+}
+
+.question-card__tag:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 10px var(--accent-light);
+}
+
+.tag-selector__btn--selected {
+  box-shadow: 0 0 12px var(--accent-light);
+}
+
+.answer-item__vote-btn {
+  position: relative;
+  overflow: visible;
+}
+
+.answer-form__submit-btn {
+  background: linear-gradient(135deg, var(--neon-lime), #88cc00);
+  color: #06060f;
+  box-shadow: 0 0 16px rgba(184, 255, 60, 0.3);
+}
+
+.answer-form__submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px rgba(184, 255, 60, 0.45);
+}
+
+.discussion-page__sort-option--active {
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-light);
+}

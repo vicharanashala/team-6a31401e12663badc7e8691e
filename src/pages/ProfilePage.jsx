@@ -1,6 +1,17 @@
-// src/pages/ProfilePage.jsx
+/**
+ * PROFILE PAGE COMPONENT - DISPLAYS THE USER PROFILE WITH BASIC INFO, STATS, BADGES AND THEIR ACTIVITY.
+ * 
+ * Features:
+ * - Shows user avatar, name, handle, bio, and join date.
+ * - Animated statistics using `useCountUp` hook.
+ * - Badges section showing earned achievements.
+ * - Tabbed view: "Answers" and "Questions" lists. 
+ */
+
 import { useState } from "react";
 import { ArrowLeft, ChevronUp, MessageSquare, Award } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
+import { useCountUp } from "../hooks/useCountUp";
 import "../styles/ProfilePage.css";
 
 const USER = {
@@ -87,66 +98,94 @@ const BADGES = [
   { label: "Century", icon: "●", earned: false },
 ];
 
-export default function ProfilePage({ onNavigate }) {
-  const [activeTab, setActiveTab] = useState("answers");
+export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
 
+  // STATE MANAGEMENT
+  const [activeTab, setActiveTab] = useState("answers");
+  const displayUser = user ? { ...USER, ...user } : USER;
+  const upvotes = useCountUp(USER.totalUpvotes);
+  const questions = useCountUp(USER.totalQuestions);
+  const answers = useCountUp(USER.totalAnswers);
+
+  // RENDER DOM
   return (
     <div className="profile-page">
+
+      {/* HEADER SECTION WITH BACK BUTTON, LOGO, THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
+
       <header className="profile-page__header">
         <div className="profile-page__header-container">
+
+          {/* BACK BUTTON */}
+
           <button
             onClick={() => onNavigate("home")}
             className="profile-page__back-btn"
           >
             <ArrowLeft className="profile-page__back-icon" />
           </button>
+
+          {/* LOGO OF THE PLATFORM */}
+
           <span className="profile-page__logo">
             VINS<span className="profile-page__logo-highlight"> FAQ SERVER</span>
           </span>
           <span className="profile-page__header-badge">/ PROFILE</span>
+          
+          {/* THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
+          
+          <div className="logout-container">
+            <ThemeToggle dark={dark} onToggle={onToggleTheme} />
+            <button type="button" onClick={onLogout} className="logout-btn">
+              LOGOUT
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="profile-page__main">
-        {/* Profile card */}
+        
+        {/* MAIN PROFILE CARD - AVATAR, NAME, USER HANDLE, BIO AND JOIN DATE */}
+        
         <div className="profile-card">
           <div className="profile-card__avatar">
-            <span className="profile-card__avatar-text">{USER.avatar}</span>
+            <span className="profile-card__avatar-text">{displayUser.avatar}</span>
           </div>
           <div className="profile-card__info">
-            <h1 className="profile-card__name">{USER.name}</h1>
-            <p className="profile-card__handle">{USER.handle}</p>
-            <p className="profile-card__bio">{USER.bio}</p>
-            <p className="profile-card__joined">JOINED {USER.joined.toUpperCase()}</p>
+            <h1 className="profile-card__name">{displayUser.name}</h1>
+            <p className="profile-card__handle">{displayUser.handle}</p>
+            <p className="profile-card__bio">{displayUser.bio}</p>
+            <p className="profile-card__joined">JOINED {displayUser.joined.toUpperCase()}</p>
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* STATISTICS ROW - TOTAL UPVOTES, TOTAL QUESTIONS AND TOTAL ANSWERS */}
+        
         <div className="profile-stats">
           <div className="profile-stats__item">
             <div className="profile-stats__icon-wrapper">
               <ChevronUp className="profile-stats__icon profile-stats__icon--primary" />
-              <span className="profile-stats__value">{USER.totalUpvotes}</span>
+              <span className="profile-stats__value">{upvotes}</span>
             </div>
             <p className="profile-stats__label">TOTAL UPVOTES</p>
           </div>
           <div className="profile-stats__item">
             <div className="profile-stats__icon-wrapper">
               <MessageSquare className="profile-stats__icon" />
-              <span className="profile-stats__value">{USER.totalQuestions}</span>
+              <span className="profile-stats__value">{questions}</span>
             </div>
             <p className="profile-stats__label">QUESTIONS</p>
           </div>
           <div className="profile-stats__item">
             <div className="profile-stats__icon-wrapper">
               <Award className="profile-stats__icon" />
-              <span className="profile-stats__value">{USER.totalAnswers}</span>
+              <span className="profile-stats__value">{answers}</span>
             </div>
             <p className="profile-stats__label">ANSWERS</p>
           </div>
         </div>
 
-        {/* Badges section */}
+        {/* BADGES SECTION - UNLOCKED FIRST THEN LOCKED */}
         <div className="badges-section">
           <p className="badges-section__title">BADGES</p>
           <div className="badges-section__list">
@@ -162,7 +201,7 @@ export default function ProfilePage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* TABS - ANSWERS AND QUESTIONS */}
         <div className="profile-tabs">
           {["answers", "questions"].map((tab) => (
             <button
@@ -175,7 +214,7 @@ export default function ProfilePage({ onNavigate }) {
           ))}
         </div>
 
-        {/* Tab content: Answers */}
+        {/* ANSWER TAB - SHOWS USER POSTED ANSWERS */}
         {activeTab === "answers" && (
           <div className="answers-list">
             {MY_ANSWERS.map((ans) => (
@@ -194,7 +233,7 @@ export default function ProfilePage({ onNavigate }) {
           </div>
         )}
 
-        {/* Tab content: Questions */}
+        {/* QUESTION TAB - SHOWS USER ASKED QUESTIONS */}
         {activeTab === "questions" && (
           <div className="questions-list">
             {MY_QUESTIONS.map((q) => (
