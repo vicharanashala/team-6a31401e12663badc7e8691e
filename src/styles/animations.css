@@ -1,0 +1,129 @@
+/*
+ * ANIMATIONS - CENTRAL FILE FOR ALL CSS KEYFRAME ANIMATIONS USED 
+*/
+
+/* 
+ * Used for the main page transitions when switching views.
+ * Creates a subtle fade‑in + upward slide + blur removal effect.
+*/
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.99);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 
+ * Applied to each FAQ card as they appear. Slides each card up slightly while fading in.
+*/
+@keyframes faq-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*
+ * Creates a subtle pulsing effect for neon elements (e.g., glow effects).
+ * Fades opacity between full and 70%.
+*/
+@keyframes neon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* 
+ * Used for borders and shadows of interactive elements (e.g., focused inputs,
+ * hovered cards). The glow expands and contracts smoothly.
+*/
+@keyframes glow-breathe {
+  0%, 100% {
+    box-shadow: 0 0 12px var(--glow-color, rgba(0, 245, 255, 0.25));
+  }
+  50% {
+    box-shadow: 0 0 24px var(--glow-color, rgba(0, 245, 255, 0.45));
+  }
+}
+
+/* 
+ * Rotates a chevron icon 180 degrees (e.g., when expanding/collapsing an FAQ).
+ * Used in conjunction with the `expanded` state.
+*/
+@keyframes chevron-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(180deg); }
+}
+
+/* 
+ * Shows a temporary "+1" particle that rises and fades out when a user votes.
+ * Used for both question and answer upvotes.
+*/
+@keyframes vote-burst {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1.4);
+  }
+}
+
+/* 
+ * Creates a moving gradient shine effect, typically used for the hero title or other prominent text.
+*/
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* 
+ * Simulates a brief flicker of the logo – gives a subtle glitch or neon‑tube feel.
+*/
+@keyframes logo-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.85; }
+  97% { opacity: 1; }
+  98% { opacity: 0.9; }
+}
+
+/* 
+ * Used for the animated underline or slide‑in effect of active tab indicators.
+ * Expands horizontally from zero to full width.
+*/
+@keyframes tab-slide {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* 
+ * Applied when an answer section expands inside a question card.
+ * Smoothly increases max‑height from 0 to 500px while fading in.
+*/
+@keyframes answer-reveal {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+/* 
+ * Applies the `page-enter` animation to page containers.
+*/
+.page-enter {
+  animation: page-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
