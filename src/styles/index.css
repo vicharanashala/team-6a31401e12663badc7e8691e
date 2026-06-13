@@ -1,5 +1,8 @@
 @import './fonts.css';
 @import './globals.css';
+@import './animations.css';
 @import './HomePage.css';
 @import './ProfilePage.css';
-@import './DiscussionPage.css'
+@import './DiscussionPage.css';
+@import './AdminPage.css';
+@import './AuthPage.css';
