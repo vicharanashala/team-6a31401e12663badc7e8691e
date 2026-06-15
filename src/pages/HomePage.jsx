@@ -12,76 +12,15 @@ import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import "../styles/HomePage.css";
 
-const FAQS = [
-  {
-    id: 1,
-    category: "General",
-    question: "What is this platform and how does it work?",
-    answer:
-      "This is a crowd-sourced FAQ platform where the community posts questions, provides answers, and upvotes the most helpful responses. Think of it as a living knowledge base — the best answers rise to the top through collective voting.",
-    votes: 142,
-    answers: 3,
-  },
-  {
-    id: 2,
-    category: "Account",
-    question: "How do I create an account and get started?",
-    answer:
-      "Click the Profile button in the top-right corner to set up your account. Once registered, you can post questions, write answers, and start accumulating upvotes from the community.",
-    votes: 98,
-    answers: 5,
-  },
-  {
-    id: 3,
-    category: "Voting",
-    question: "How does the upvote system work?",
-    answer:
-      "Any logged-in user can upvote an answer they find helpful. Upvotes signal quality to other readers and contribute to the answerer's reputation score. You cannot upvote your own answers.",
-    votes: 76,
-    answers: 2,
-  },
-  {
-    id: 4,
-    category: "Moderation",
-    question: "What content is not allowed on this platform?",
-    answer:
-      "Spam, duplicate questions, off-topic posts, and abusive content are not permitted. The community can flag posts for moderator review. Repeated violations may result in account restrictions.",
-    votes: 61,
-    answers: 4,
-  },
-  {
-    id: 5,
-    category: "General",
-    question: "Can I edit or delete my questions and answers?",
-    answer:
-      "Yes. You can edit your own posts at any time from your profile page. Deletion is available as long as your answer has not been accepted as the top response, to preserve discussion integrity.",
-    votes: 54,
-    answers: 1,
-  },
-  {
-    id: 6,
-    category: "Account",
-    question: "How is my reputation score calculated?",
-    answer:
-      "Your reputation is the sum of all upvotes received on your answers. Each upvote counts as +1. High-reputation users gain additional privileges such as the ability to close duplicate questions.",
-    votes: 49,
-    answers: 2,
-  },
-];
-
-const CATEGORIES = ["All", "General", "Account", "Voting", "Moderation"];
-
-const CATEGORY_SLUG = {
-  General: "general",
-  Account: "account",
-  Voting: "voting",
-  Moderation: "moderation",
-};
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // FUNCTION THAT HIGHLIGHTS SEARCH TERMS INSIDE TEXT
 function highlightText(text, query) {
-  if (!query.trim()) return text;
+  if (!query.trim()) {
+    return text;
+  }
   const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase() ? (
       <mark key={i} className="home-page__highlight">{part}</mark>
@@ -91,25 +30,99 @@ function highlightText(text, query) {
   );
 }
 
+// CAPITALISE FIRST LETTER OF A TAG
+function capitalise(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export default function HomePage({ onNavigate, onRequestLogin, user, dark, onToggleTheme }) {
 
   // STATE MANAGEMENT
+  const [faqs, setFaqs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedTag, setSelectedTag] = useState("All");
+  const [availableTags, setAvailableTags] = useState("All");
   const [expandedId, setExpandedId] = useState(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  // FILTER FAQs BASED ON SELECTED TAG AND SEARCH QUERY
-  const filtered = FAQS.filter((faq) => {
-    const matchesCategory =
-      activeCategory === "All" || faq.category === activeCategory;
-    const matchesQuery =
-      query.trim() === "" ||
-      faq.question.toLowerCase().includes(query.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(query.toLowerCase());
-    return matchesCategory && matchesQuery;
-  });
+  // FETCH AVAILABLE TAGS FROM BACKEND
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags`);
+        const data = await response.json();
 
+        if(response.ok && data.success) {
+          const tagNames = data.data.map(tag => tag.tag_name);
+          setAvailableTags(["All", ...tagNames]);
+        } else {
+          console.warn("Failed to fetch tags");
+          setAvailableTags(["All Test", "General Test", "Account Test"]);
+        }
+      } catch (err) {
+        console.err("Error Fetching tags : ", err);
+        setAvailableTags(["All Test", "General Test", "Account Test"]);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  // FILTER FAQs BASED ON SELECTED TAG AND SEARCH QUERY
+  const fetchFAQs = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      let url;
+      const hasSearch = query.trim() !== "";
+      const hasTag = selectedTag !== "All";
+
+      if(hasSearch || hasTag) {
+        const params = new URLSearchParams();
+        if(hasSearch) {
+          params.append('q', query.trim());
+        }
+        if(hasTag) {
+          params.append('tag', selectedTag);
+        }
+
+        url = `${API_BASE_URL}/search?${params.toString()}`;
+      } else {
+        url = `${API_BASE_URL}/faqs`;
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if(!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load FAQs');
+      }
+
+      const mappedFaqs = data.data.map(item => ({
+        id : item._id,
+        question : item.question,
+        answer : item.answer,
+        tag : item.tag || 'general',
+        votes : item.helpful?.yes || 0,
+        answers : 0
+      }));
+
+      setFaqs(mappedFaqs);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // REFETCH WHEN SEARCH QUERY OR SELECTED TAG CHANGES
+  useEffect(() => {
+    fetchFAQs();
+  }, [query, selectedTag]);
+
+  // SCROLL PROGRESS BAR
   useEffect(() => {
     const onScroll = () => {
       const scrollTop = window.scrollY;
@@ -119,6 +132,24 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // LOADING STATE 
+  if(loading && faqs.length === 0) {
+    return (
+      <div className="home-page">
+        <div className="loading-spinner">Loading FAQs...</div>
+      </div>
+    );
+  }
+
+  // ERROR STATE 
+  if(error && faqs.length === 0) {
+    return (
+      <div className="home-page">
+        <div className="error-message">Error : {error}</div>
+      </div>
+    );
+  }
 
   // RENDER DOM
   return (
@@ -216,31 +247,36 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
 
       <div className="home-page__filters">
         <div className="home-page__filters-container">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`home-page__filter-btn home-page__filter-btn--${cat.toLowerCase()} ${
-                activeCategory === cat ? "home-page__filter-btn--active" : ""
-              }`}
-            >
-              {cat.toUpperCase()}
-            </button>
-          ))}
+          {availableTags.map((tag) => {
+            const displayTag = tag === "All" ? "All" : capitalise(tag);
+            const isActive = selectedTag === tag;
+
+            const additionalClass = tag === "All" ? "home-page__filter-btn--all" : `home-page__filter-btn--${tag}`; 
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setSelectedTag(tag)}
+                className={`home-page__filter-btn ${additionalClass} ${isActive ? "home-page__filter-btn--active" : ""}`}
+              >
+                {displayTag.toUpperCase()}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* MAIN SECTION WITH FAQ LIST OR EMPTY STATE */}
 
       <main className="home-page__main">
-        {filtered.length === 0 ? (
+        {faqs.length === 0 ? (
 
           // EMPTY STATE - NO FAQ MATCH SEARCH
 
           <div className="home-page__empty">
             <p className="home-page__empty-message">
-              No matches found for "{query}"
+              No FAQs found. {query && `No matches for "${query}". `}
+              Try a different search or post a new question.
             </p>
             <button
               type="button"
@@ -255,9 +291,9 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
           // NORMAL STATE - LIST OF FAQ ITEMS
 
           <div className="home-page__faq-list">
-            {filtered.map((faq, index) => {
+            {faqs.map((faq, index) => {
               const isOpen = expandedId === faq.id;
-              const slug = CATEGORY_SLUG[faq.category] || "general";
+              const slug = faq.tag;
               return (
                 <div 
                   key={faq.id} 
@@ -279,7 +315,7 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
                     <div className="faq-item__content">
                       <div className="faq-item__meta">
                         <span className="faq-item__category">
-                          {faq.category.toUpperCase()}
+                          {capitalise(faq.tag).toUpperCase()}
                         </span>
                         <span className="faq-item__votes">
                           <ChevronUp className="faq-item__votes-icon" />
