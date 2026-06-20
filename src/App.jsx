@@ -6,24 +6,19 @@ import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import { useTheme } from "./hooks/useTheme";
 
-// PAGES THAT REQUIRE AUTHENTICATION
 const PROTECTED_PAGES = ["discussion", "profile", "admin"];
 
-// FUNTION THAT RESOLVE WHICH PAGE TO NAVIGATE AFTER SUCCESSFUL LOGIN
 function resolvePostLoginPage(page) {
   return PROTECTED_PAGES.includes(page) ? page : "home";
 }
 
 export default function App() {
+  const [page, setPage] = useState("home");
+  const [user, setUser] = useState(null);
+  const [loginIntent, setLoginIntent] = useState(false);
+  const authTargetRef = useRef("home");
+  const { dark, toggleTheme } = useTheme();
 
-  // STATE MANAGEMENT
-  const [page, setPage] = useState("home"); // CURRENT PAGE IDENTIFIER
-  const [user, setUser] = useState(null); // AUTHENTICATED USER OBJECT
-  const [loginIntent, setLoginIntent] = useState(false); // FLAG TO SHOW THE AUTH PAGE
-  const authTargetRef = useRef("home"); // REFERENCE TO STORE PAGE USER WANTED TO VISIT
-  const { dark, toggleTheme } = useTheme(); // THEME MANAGEMENT
-
-  // CHECK LOCAL STORAGE FOR SAVED USER SESSION
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -36,17 +31,15 @@ export default function App() {
     }
   }, []);
 
-  // IF USER IS ON ADMIN PAGE BUT USER ROLE IS NOT ADMIN, REDIRECT TO HOME PAGE
   useEffect(() => {
     if (page === "admin" && user && user.role !== "admin") {
       setPage("home");
     }
   }, [page, user]);
 
-  // DETERMINE WHETHER TO SHOW AUTH PAGE OR NOT
-  const showAuth = !user && (PROTECTED_PAGES.includes(page) || loginIntent);
+  const showAuth =
+    !user && (PROTECTED_PAGES.includes(page) || loginIntent);
 
-  // CALLED BY AUTH PAGE WHEN LOGIN IS SUCCESSFUL
   const completeLogin = (userData) => {
     const destination = authTargetRef.current;
     setUser(userData);
@@ -56,7 +49,6 @@ export default function App() {
     authTargetRef.current = "home";
   };
 
-  // LOGOUT THE CURRENT USER
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("user");
@@ -65,20 +57,17 @@ export default function App() {
     setPage("home");
   };
 
-  // NAVIGATE TO A NEW PAGE
   const handleNavigate = (nextPage) => {
     setLoginIntent(false);
     authTargetRef.current = resolvePostLoginPage(nextPage);
     setPage(nextPage);
   };
 
-  // CALLED WHEN A USER CLICKS LOGIN BUTTON
   const handleRequestLogin = () => {
     authTargetRef.current = "home";
     setLoginIntent(true);
   };
 
-  // SPECIAL CALL BY AUTH PAGE 
   const handleAuthNavigate = (nextPage) => {
     setLoginIntent(false);
     authTargetRef.current = "home";
@@ -87,9 +76,6 @@ export default function App() {
 
   const themeProps = { dark, onToggleTheme: toggleTheme };
 
-  // RENDER DOM
-
-  // IF AUTHENTICATION IS REQUIRED, SHOW AUTH PAGE
   if (showAuth) {
     return (
       <div className="app-root">
@@ -103,10 +89,8 @@ export default function App() {
     );
   }
 
-  // OTHERWISE SHOW THE ACTUAL PAGE CONTENT
   return (
     <div className="app-root">
-      <div key={page} className="page-enter">
         {page === "home" && (
           <HomePage
             onNavigate={handleNavigate}
@@ -134,7 +118,6 @@ export default function App() {
             {...themeProps}
           />
         )}
-      </div>
     </div>
   );
 }
