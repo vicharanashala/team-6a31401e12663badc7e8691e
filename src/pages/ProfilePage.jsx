@@ -1,13 +1,3 @@
-/**
- * PROFILE PAGE COMPONENT - DISPLAYS THE USER PROFILE WITH BASIC INFO, STATS, BADGES AND THEIR ACTIVITY.
- * 
- * Features:
- * - Shows user avatar, name, handle, bio, and join date.
- * - Animated statistics using `useCountUp` hook.
- * - Badges section showing earned achievements.
- * - Tabbed view: "Answers" and "Questions" lists. 
- */
-
 import { useState } from "react";
 import { ArrowLeft, ChevronUp, MessageSquare, Award } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
@@ -20,9 +10,9 @@ const USER = {
   avatar: "AG",
   bio: "Software engineer. Obsessed with clean documentation and helpful communities.",
   joined: "March 2023",
-  totalUpvotes: 248,
-  totalQuestions: 12,
-  totalAnswers: 31,
+  totalUpvotes: 293,
+  totalQuestions: 4,
+  totalAnswers: 4,
 };
 
 const MY_QUESTIONS = [
@@ -60,32 +50,28 @@ const MY_ANSWERS = [
   {
     id: 1,
     question: "What is this platform and how does it work?",
-    excerpt:
-      "This is a crowd-sourced FAQ platform where the community posts questions and votes on the most helpful responses...",
+    excerpt: "This is a crowd-sourced FAQ platform where the community posts questions and votes on the most helpful responses...",
     votes: 142,
     time: "5d ago",
   },
   {
     id: 2,
     question: "How does the upvote system work?",
-    excerpt:
-      "Any logged-in user can upvote an answer they find helpful. Upvotes signal quality to other readers...",
+    excerpt: "Any logged-in user can upvote an answer they find helpful. Upvotes signal quality to other readers...",
     votes: 76,
     time: "1w ago",
   },
   {
     id: 3,
     question: "Can I edit or delete my questions and answers?",
-    excerpt:
-      "Yes. You can edit your own posts at any time from your profile page. Deletion is available as long as...",
+    excerpt: "Yes. You can edit your own posts at any time from your profile page. Deletion is available as long as...",
     votes: 54,
     time: "2w ago",
   },
   {
     id: 4,
     question: "How do I report a misleading answer?",
-    excerpt:
-      "Use the flag icon on any post to report it. The moderation team reviews all flagged content within 24 hours.",
+    excerpt: "Use the flag icon on any post to report it. The moderation team reviews all flagged content within 24 hours.",
     votes: 21,
     time: "3w ago",
   },
@@ -94,46 +80,30 @@ const MY_ANSWERS = [
 const BADGES = [
   { label: "First Answer", icon: "✦", earned: true },
   { label: "Top 10%", icon: "◆", earned: true },
-  { label: "Helpful Voice", icon: "▲", earned: true },
-  { label: "Century", icon: "●", earned: false },
+  { label: "Helpful Voice", icon: "▲", earned: true }
 ];
 
 export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
-
-  // STATE MANAGEMENT
   const [activeTab, setActiveTab] = useState("answers");
   const displayUser = user ? { ...USER, ...user } : USER;
   const upvotes = useCountUp(USER.totalUpvotes);
   const questions = useCountUp(USER.totalQuestions);
   const answers = useCountUp(USER.totalAnswers);
 
-  // RENDER DOM
   return (
     <div className="profile-page">
-
-      {/* HEADER SECTION WITH BACK BUTTON, LOGO, THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
-
       <header className="profile-page__header">
         <div className="profile-page__header-container">
-
-          {/* BACK BUTTON */}
-
           <button
             onClick={() => onNavigate("home")}
             className="profile-page__back-btn"
           >
             <ArrowLeft className="profile-page__back-icon" />
           </button>
-
-          {/* LOGO OF THE PLATFORM */}
-
           <span className="profile-page__logo">
             VINS<span className="profile-page__logo-highlight"> FAQ SERVER</span>
           </span>
           <span className="profile-page__header-badge">/ PROFILE</span>
-          
-          {/* THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
-          
           <div className="logout-container">
             <ThemeToggle dark={dark} onToggle={onToggleTheme} />
             <button type="button" onClick={onLogout} className="logout-btn">
@@ -144,9 +114,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
       </header>
 
       <main className="profile-page__main">
-        
-        {/* MAIN PROFILE CARD - AVATAR, NAME, USER HANDLE, BIO AND JOIN DATE */}
-        
+        {/* Profile card */}
         <div className="profile-card">
           <div className="profile-card__avatar">
             <span className="profile-card__avatar-text">{displayUser.avatar}</span>
@@ -159,8 +127,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
           </div>
         </div>
 
-        {/* STATISTICS ROW - TOTAL UPVOTES, TOTAL QUESTIONS AND TOTAL ANSWERS */}
-        
+        {/* Stats row */}
         <div className="profile-stats">
           <div className="profile-stats__item">
             <div className="profile-stats__icon-wrapper">
@@ -185,7 +152,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
           </div>
         </div>
 
-        {/* BADGES SECTION - UNLOCKED FIRST THEN LOCKED */}
+        {/* Badges section */}
         <div className="badges-section">
           <p className="badges-section__title">BADGES</p>
           <div className="badges-section__list">
@@ -201,7 +168,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
           </div>
         </div>
 
-        {/* TABS - ANSWERS AND QUESTIONS */}
+        {/* Tabs */}
         <div className="profile-tabs">
           {["answers", "questions"].map((tab) => (
             <button
@@ -214,7 +181,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
           ))}
         </div>
 
-        {/* ANSWER TAB - SHOWS USER POSTED ANSWERS */}
+        {/* Tab content: Answers */}
         {activeTab === "answers" && (
           <div className="answers-list">
             {MY_ANSWERS.map((ans) => (
@@ -233,7 +200,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
           </div>
         )}
 
-        {/* QUESTION TAB - SHOWS USER ASKED QUESTIONS */}
+        {/* Tab content: Questions */}
         {activeTab === "questions" && (
           <div className="questions-list">
             {MY_QUESTIONS.map((q) => (

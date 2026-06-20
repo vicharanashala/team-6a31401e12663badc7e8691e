@@ -1,120 +1,10 @@
-/**
- * ADMIN PAGE COMPONENT - ONLY ACCESSIBLE TO USERS WITH "ADMIN" ROLE 
- * 
- * Features:
- * - FAQ Conversion Queue: Approve/reject popular questions (based on upvotes) to become FAQs.
- * - Tag Management: Create, edit, delete tags.
- * - User Management: View all users, promote users to admin, delete user accounts.
- */
-
 import { useState } from "react";
-import { ArrowLeft, ChevronUp, Check, X, Tag, Users, FileQuestion, Pencil, Trash2, Shield, Plus } from "lucide-react";
+import { ArrowLeft, ChevronUp, Check, X, Tag, Users, FileQuestion, Pencil, Trash2, Shield, Plus, TriangleRight } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import "../styles/AdminPage.css";
+import { INITIAL_FAQ_CANDIDATES, INITIAL_TAGS, INITIAL_PLATFORM_USERS } from "../data/admindata";
 
-const FAQ_UPVOTE_THRESHOLD = 10;
-
-const INITIAL_FAQ_CANDIDATES = [
-  {
-    id: 1,
-    title: "What's the difference between a FAQ post and a discussion post?",
-    body: "I see both types on the platform but I'm not sure which one to use when I have a question.",
-    upvotes: 22,
-    author: "leon_wd",
-    tags: ["general", "meta"],
-    topAnswer:
-      "FAQ posts are curated, evergreen answers for common questions. Discussion posts are open-ended threads where the community can debate and vote on answers in real time.",
-    status: "pending",
-  },
-  {
-    id: 2,
-    title: "How do I reset my password if I no longer have access to my email?",
-    body: "My old email was deactivated and now I can't receive the reset link.",
-    upvotes: 14,
-    author: "amara_k",
-    tags: ["account", "security"],
-    topAnswer:
-      "Contact support directly with your username. They can verify ownership through alternative means.",
-    status: "pending",
-  },
-  {
-    id: 3,
-    title: "Is dark mode available across all pages?",
-    body: "I can toggle dark mode on the home page but want to know if it persists elsewhere.",
-    upvotes: 11,
-    author: "nina_c",
-    tags: ["feature", "general"],
-    topAnswer:
-      "Theme preference is stored in localStorage and applies globally across the platform.",
-    status: "pending",
-  },
-  {
-    id: 4,
-    title: "Can I follow specific tags or topics?",
-    body: "I want notifications only about questions in my area of expertise.",
-    upvotes: 8,
-    author: "sana_mir",
-    tags: ["feature", "notifications"],
-    topAnswer: "",
-    status: "pending",
-  },
-];
-
-const INITIAL_TAGS = [
-  { id: 1, name: "account", questionCount: 24 },
-  { id: 2, name: "security", questionCount: 12 },
-  { id: 3, name: "general", questionCount: 38 },
-  { id: 4, name: "meta", questionCount: 9 },
-  { id: 5, name: "feature", questionCount: 17 },
-  { id: 6, name: "notifications", questionCount: 6 },
-  { id: 7, name: "voting", questionCount: 11 },
-  { id: 8, name: "moderation", questionCount: 5 },
-  { id: 9, name: "bug", questionCount: 8 },
-  { id: 10, name: "help", questionCount: 15 },
-];
-
-const INITIAL_PLATFORM_USERS = [
-  {
-    id: 1,
-    name: "Aashu Goswami",
-    email: "aashu@example.com",
-    handle: "@aashu_goswami",
-    role: "user",
-    joined: "March 2023",
-  },
-  {
-    id: 2,
-    name: "VINS Admin",
-    email: "admin@vins.com",
-    handle: "@vins_admin",
-    role: "admin",
-    joined: "January 2023",
-  },
-  {
-    id: 3,
-    name: "Amara Kline",
-    email: "amara@example.com",
-    handle: "@amara_k",
-    role: "user",
-    joined: "June 2023",
-  },
-  {
-    id: 4,
-    name: "Leon Ward",
-    email: "leon@example.com",
-    handle: "@leon_wd",
-    role: "user",
-    joined: "August 2023",
-  },
-  {
-    id: 5,
-    name: "Sana Mirza",
-    email: "sana@example.com",
-    handle: "@sana_mir",
-    role: "user",
-    joined: "November 2023",
-  },
-];
+const FAQ_UPVOTE_THRESHOLD = 25;
 
 const TABS = [
   { id: "faq", label: "FAQ Review", icon: FileQuestion },
@@ -123,12 +13,12 @@ const TABS = [
 ];
 
 export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
-  // STATE MANAGEMENT
   const [activeTab, setActiveTab] = useState("faq");
   const [candidates, setCandidates] = useState(INITIAL_FAQ_CANDIDATES);
   const [tags, setTags] = useState(INITIAL_TAGS);
   const [platformUsers, setPlatformUsers] = useState(INITIAL_PLATFORM_USERS);
   const [actionMessage, setActionMessage] = useState("");
+
   const [newTagName, setNewTagName] = useState("");
   const [editingTagId, setEditingTagId] = useState(null);
   const [editingTagName, setEditingTagName] = useState("");
@@ -138,15 +28,11 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
   );
   const processedCandidates = candidates.filter((c) => c.status !== "pending");
 
-  // HELPER FUNCTIONS
-
-  // SHOW TEMPORARY MESSAGE FUNCTION
   function showMessage(text) {
     setActionMessage(text);
     setTimeout(() => setActionMessage(""), 3000);
   }
 
-  // APPROVE OR REJECT A CANDIDATE QUESTION - UPDATES STATUS AND SHOW MESSSAGE
   function handleFaqDecision(id, decision) {
     setCandidates((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: decision } : c)),
@@ -158,7 +44,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     );
   }
 
-  // CREATE A NEW TAG FUCNTION
   function handleAddTag(e) {
     e.preventDefault();
     const name = newTagName.trim().toLowerCase().replace(/\s+/g, "-");
@@ -172,13 +57,11 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     showMessage(`Tag "${name}" created successfully.`);
   }
 
-  // EDIT TAG FUNCTION - ONLY EDITING STATE
   function startEditTag(tag) {
     setEditingTagId(tag.id);
     setEditingTagName(tag.name);
   }
 
-  // FUNCTION TO SAVE THE EDITED TAG
   function saveEditTag() {
     const name = editingTagName.trim().toLowerCase().replace(/\s+/g, "-");
     if (!name) return;
@@ -194,25 +77,28 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     showMessage("Tag updated successfully.");
   }
 
-  // FUNCTION TO DELETE A TAG BY ID
   function deleteTag(id) {
     const tag = tags.find((t) => t.id === id);
     setTags((prev) => prev.filter((t) => t.id !== id));
     showMessage(`Tag "${tag?.name}" deleted.`);
   }
 
-  // DELETE A USER ACCOUNT - ADMINS CANNOT BE DELETED
   function deleteUser(id) {
     const target = platformUsers.find((u) => u.id === id);
+    if(!target) return;
+
+    if(target.id === 1 || target.id === 4) {
+      showMessage("Admin's accounts cannot be deleted.");
+      return;
+    }
     if (target?.email === user?.email) {
-      showMessage("You cannot delete your admin account.");
+      showMessage("You cannot delete your own account.");
       return;
     }
     setPlatformUsers((prev) => prev.filter((u) => u.id !== id));
     showMessage(`User ${target?.name} removed from the platform.`);
   }
 
-  // FUNCTION TO PROMOTE USER TO ADMIN
   function promoteToAdmin(id) {
     setPlatformUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, role: "admin" } : u)),
@@ -221,17 +107,10 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     showMessage(`${target?.name} is now an admin.`);
   }
 
-  // RENDER DOM
   return (
     <div className="admin-page">
-
-      {/* HEADER WITH NAVIGATION BACK ARROW, LOGO, THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
-      
       <header className="admin-page__header">
         <div className="admin-page__header-container">
-          
-          {/* NAVIGATION BACK ARROW */}
-
           <button
             onClick={() => onNavigate("home")}
             className="admin-page__back-btn"
@@ -239,16 +118,10 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           >
             <ArrowLeft className="admin-page__back-icon" />
           </button>
-
-          {/* LOGO OF THE PLATFORM */}
-
           <span className="admin-page__logo">
             VINS<span className="admin-page__logo-highlight"> FAQ SERVER</span>
           </span>
           <span className="admin-page__header-badge">/ ADMIN</span>
-
-          {/* THEME TOGGLE BUTTON AND LOGOUT BUTTON */}
-
           <div className="admin-page__header-actions">
             <ThemeToggle dark={dark} onToggle={onToggleTheme} />
             <button onClick={onLogout} className="admin-page__logout-btn" type="button">
@@ -257,8 +130,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           </div>
         </div>
       </header>
-
-      {/* INTRO SECTION WITH SHIELD ICON AND WELCOME MESSAGE */}
 
       <main className="admin-page__main">
         <div className="admin-page__intro">
@@ -273,15 +144,11 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           </div>
         </div>
 
-        {/* TEMPORARY MESSAGE SPACE */}
-
         {actionMessage && (
           <div className="admin-page__toast" role="status">
             {actionMessage}
           </div>
         )}
-
-        {/* ADMIN CONTROL TAB NAVIGATION */}
 
         <div className="admin-page__tabs">
           {TABS.map(({ id, label, icon: Icon }) => (
@@ -296,8 +163,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
             </button>
           ))}
         </div>
-        
-        {/* TAB 1 - FAQ CONVERSION QUEUE */}
 
         {activeTab === "faq" && (
           <section className="admin-section">
@@ -361,8 +226,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
               </div>
             )}
 
-            {/* RECENTLY PROCESSED QUESTIONS - APPROVED OR REJECTED */}
-
             {processedCandidates.length > 0 && (
               <>
                 <h3 className="admin-section__subtitle">Recently Processed</h3>
@@ -397,8 +260,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           </section>
         )}
 
-        {/* TAB 2 - TAG MANAGEMENT */}
-
         {activeTab === "tags" && (
           <section className="admin-section">
             <div className="admin-section__header">
@@ -407,8 +268,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                 Create, rename, or remove tags used across discussion questions.
               </p>
             </div>
-
-            {/* FORM TO CREATE A NEW TAG */}
 
             <form className="admin-tag-form" onSubmit={handleAddTag}>
               <input
@@ -423,8 +282,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                 Create Tag
               </button>
             </form>
-
-            {/* TABLE OF EXISTING TAGS WITH TWO ACTIONS - EDIT OR DELETE */}
 
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -454,9 +311,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                       <td>
                         <div className="admin-table__actions">
                           {editingTagId === tag.id ? (
-
-                            // SAVE AND CANCEL BUTTONS - WHEN EDITING
-
                             <>
                               <button
                                 type="button"
@@ -476,9 +330,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                               </button>
                             </>
                           ) : (
-
-                            // EDIT AND DELETE BUTTONS - NORMALLY 
-
                             <>
                               <button
                                 type="button"
@@ -508,8 +359,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           </section>
         )}
 
-        {/* TAB 3 - USER MANAGEMENT */}
-
         {activeTab === "users" && (
           <section className="admin-section">
             <div className="admin-section__header">
@@ -518,8 +367,6 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                 View all platform users, remove accounts, or promote users to admin.
               </p>
             </div>
-
-            {/* TABLE OF ALL PLATFORM USERS WITH ACTIONS - MAKE ADMIN OR DELETE */}
 
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -561,7 +408,7 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                             type="button"
                             className="admin-btn admin-btn--small admin-btn--reject"
                             onClick={() => deleteUser(u.id)}
-                            disabled={u.email === user?.email}
+                            disabled={u.email === user?.email || u.role === "admin"}
                           >
                             <Trash2 className="admin-btn__icon" />
                             Delete

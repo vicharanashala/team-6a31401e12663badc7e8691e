@@ -1,18 +1,5 @@
-/**
- * AUTH PAGE COMPONENT - HANDLES USER AUTHENTICATION (LOGIN AND REGISTRATION)
- * 
- * Features:
- * - Toggle between Login and Register modes.
- * - Login: Validates credentials.
- * - Register: Collects name, email, password; enforces password length.
- * - Password visibility toggle (show/hide password).
- * - Displays error messages for invalid inputs or mismatched credentials.
- */
-
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-import "../styles/AuthPage.css";
-
 const MOCK_USERS = [
   {
     email: "aashu@example.com",
@@ -33,7 +20,6 @@ const MOCK_USERS = [
 ];
 
 export default function AuthPage({ onNavigate, onLogin }) {
-  // STATE MANAGEMENT
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,9 +27,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  // EVENT HANDLERS
-
-  // FUNCTION TO HANDLE LOGIN FORM SUBMISSION
   function handleLogin(e) {
     e.preventDefault();
     setError("");
@@ -63,7 +46,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
     }
   }
 
-  // FUNCTION TO HANDLE REGISTRATION FORM SUBMISSION
   function handleRegister(e) {
     e.preventDefault();
     setError("");
@@ -75,18 +57,11 @@ export default function AuthPage({ onNavigate, onLogin }) {
       setError("Password must be at least 6 characters.");
       return;
     }
-
-    // AUTO-GENERATE A HANDLE BASED ON USER'S NAME
     const handle = "@" + name.trim().toLowerCase().replace(/\s+/g, "_");
-
-    // AUTO-GENERATE AN AVATAR - TWO INITAL LETTERS IN UPPERCASE
     const avatar = name.trim().split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-
-    // CALL THE ON LOGIN CALLBACK WITH NEWLY REGISTERED USER
-    onLogin({ name: name.trim(), handle, avatar, email, role : "user" });
+    onLogin({ name: name.trim(), handle, avatar, email, role: "user" });
   }
 
-  // FUNCTION TO SWITCH BETWEEN LOGIN AND REGISTER FORMS
   function switchMode(m) {
     setMode(m);
     setError("");
@@ -95,39 +70,27 @@ export default function AuthPage({ onNavigate, onLogin }) {
     setName("");
   }
 
-  // RENDER DOM
   return (
     <div className="auth-page">
-
-      {/* HEADER SECTION WITH BACK BUTTON AND LOGO */}
-      
+      {/* Header */}
       <header className="auth-page__header">
         <div className="auth-page__header-container">
-          
-          {/* BACK BUTTON */}
-
           <button
             onClick={() => onNavigate("home")}
             className="auth-page__back-btn"
           >
             <ArrowLeft className="auth-page__back-icon" />
           </button>
-
-          {/* LOGO OF THE PLATFORM */}
-
           <span className="auth-page__logo">
             VINS<span className="auth-page__logo-highlight"> FAQ SERVER</span>
           </span>
         </div>
       </header>
 
-      {/* MAIN FORM CONTAINER */}
-
+      {/* Form container */}
       <div className="auth-page__main">
         <div className="auth-page__form-container">
-          
-          {/* MODE TOGGLE BUTTONS - LOGIN OR REGISTER */}
-          
+          {/* Mode toggle */}
           <div className="auth-page__mode-toggle">
             <button
               onClick={() => switchMode("login")}
@@ -147,8 +110,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
             </button>
           </div>
 
-          {/* HEADING - TEXT CHANGES BASED ON MODE */}
-
           <div className="auth-page__heading">
             <p className="auth-page__heading-badge">
               {mode === "login" ? "Welcome back" : "Create account"}
@@ -158,15 +119,10 @@ export default function AuthPage({ onNavigate, onLogin }) {
             </h1>
           </div>
 
-          {/* AUTHENTICATION FORM - FIELDS DEPEND ON MODE */}
-
           <form
             onSubmit={mode === "login" ? handleLogin : handleRegister}
             className="auth-page__form"
           >
-
-            {/* FULL NAME FIELD - ONLY FOR REGISTER MODE */}
-
             {mode === "register" && (
               <div className="auth-page__field">
                 <label className="auth-page__label">FULL NAME</label>
@@ -180,8 +136,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
               </div>
             )}
 
-            {/* EMAIL FIELD - ALWAYS SHOWN */}
-
             <div className="auth-page__field">
               <label className="auth-page__label">EMAIL</label>
               <input
@@ -192,8 +146,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
                 className="auth-page__input"
               />
             </div>
-
-            {/* PASSWORD FIELD - WITH SHOW AND HIDE PASSOWRD TOGGLE */}
 
             <div className="auth-page__field">
               <label className="auth-page__label">PASSWORD</label>
@@ -215,13 +167,9 @@ export default function AuthPage({ onNavigate, onLogin }) {
               </div>
             </div>
 
-            {/* DISPLAY ERROR MESSAGE IF ANY */}
-
             {error && (
               <p className="auth-page__error">{error}</p>
             )}
-
-            {/* SUBMIT BUTTON - TEXT CAHNGES BASED ON MODE */}
 
             <button
               type="submit"
@@ -231,8 +179,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
             </button>
           </form>
 
-          {/* SHOW DEMO CREDENTIALS */}
-          
           {mode === "login" && (
             <p className="auth-page__demo-note">
               User: <span className="auth-page__demo-cred">aashu@example.com</span> /{" "}
@@ -242,8 +188,6 @@ export default function AuthPage({ onNavigate, onLogin }) {
               <span className="auth-page__demo-cred">admin123</span>
             </p>
           )}
-
-          {/* LINK TO SWITCH BETWEEN LOGIN AND REGISTER */}
 
           <p className="auth-page__switch-mode">
             {mode === "login" ? "No account? " : "Already have one? "}

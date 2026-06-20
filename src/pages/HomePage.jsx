@@ -1,369 +1,306 @@
-/**
- * HOME PAGE COMPONENT -  LANDING PAGE OF PLATFORM WITH LIST OF FAQs
- * 
- * Features:
- * - Search FAQs by text - highlights matching terms.
- * - Filter by tags.
- * - Expand/collapse individual FAQ answers.
- */
-
-import { useState, useEffect } from "react";
-import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, ChevronUp, ChevronDown, MessageSquare, Sparkles, ArrowRight, Users, BookOpen, HelpCircle } from "lucide-react";
+import ChatBot from "../components/chatSidebar";
 import ThemeToggle from "../components/ThemeToggle";
+import { FAQS } from "../data/faqs";
+import { TAGS } from "../data/tags";
 import "../styles/HomePage.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
-// FUNCTION THAT HIGHLIGHTS SEARCH TERMS INSIDE TEXT
 function highlightText(text, query) {
-  if (!query.trim()) {
-    return text;
-  }
-  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+  if (!query.trim()) return text;
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
 
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase() ? (
-      <mark key={i} className="home-page__highlight">{part}</mark>
+      <mark key={i} className="home-page__highlight">
+        {part}
+      </mark>
     ) : (
       part
-    ),
+    )
   );
 }
 
-// CAPITALISE FIRST LETTER OF A TAG
-function capitalise(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+function smoothScrollTo(element, duration = 2000) {
+  if (!element) return;
+
+  const targetY = element.getBoundingClientRect().top + window.pageYOffset - 160;
+
+  const startY = window.pageYOffset;
+  const distance = targetY - startY;
+  let startTime = null;
+
+  function animation(currentTime) {
+    if (!startTime) startTime = currentTime;
+
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    const ease =
+      progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+    window.scrollTo(0, startY + distance * ease);
+
+    if (elapsed < duration) {
+      requestAnimationFrame(animation);
+    }
+  }
+
+  requestAnimationFrame(animation);
+}
+
+function FAQItem({ faq, search, innerRef }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div ref={innerRef} className={`vins-faq-item ${open ? "expanded" : ""}`}>
+      <button
+        className="vins-faq-trigger"
+        onClick={() => setOpen(o => !o)}
+      >
+        <div className="vins-faq-q-meta">
+          <span className={`vins-tag vins-tag-${faq.tag}`}>
+            {faq.tag}
+          </span>
+
+          <span className="vins-faq-question">
+            {highlightText(faq.question, search)}
+          </span>
+        </div>
+
+        <ChevronDown
+          size={16}
+          className={`vins-faq-chevron ${open ? "open" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="vins-faq-answer">
+          {highlightText(faq.answer, search)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function HomePage({ onNavigate, onRequestLogin, user, dark, onToggleTheme }) {
+  const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState("All");
+  const [chatOpen, setChatOpen] = useState(false);
 
-  // STATE MANAGEMENT
-  const [faqs, setFaqs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [query, setQuery] = useState("");
-  const [selectedTag, setSelectedTag] = useState("All");
-  const [availableTags, setAvailableTags] = useState("All");
-  const [expandedId, setExpandedId] = useState(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const faqRefs = useRef({});
+  const allTags = TAGS;
 
-  // FETCH AVAILABLE TAGS FROM BACKEND
+  const visibleFaqs = FAQS.filter(
+    (faq) => activeTag === "All" || faq.tag === activeTag
+  );
+
   useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/tags`);
-        const data = await response.json();
+    const timer = setTimeout(() => {
+      if (!search.trim()) return;
 
-        if(response.ok && data.success) {
-          const tagNames = data.data.map(tag => tag.tag_name);
-          setAvailableTags(["All", ...tagNames]);
-        } else {
-          console.warn("Failed to fetch tags");
-          setAvailableTags(["All Test", "General Test", "Account Test"]);
-        }
-      } catch (err) {
-        console.err("Error Fetching tags : ", err);
-        setAvailableTags(["All Test", "General Test", "Account Test"]);
-      }
-    };
-    fetchTags();
-  }, []);
+      const firstMatch = visibleFaqs.find(
+        (faq) => faq.question.toLowerCase().includes(search.toLowerCase()) 
+      );
 
-  // FILTER FAQs BASED ON SELECTED TAG AND SEARCH QUERY
-  const fetchFAQs = async () => {
-    setLoading(true);
-    setError(null);
+      if (!firstMatch) return;
 
-    try {
-      let url;
-      const hasSearch = query.trim() !== "";
-      const hasTag = selectedTag !== "All";
+      const element = faqRefs.current[firstMatch.id];
+      smoothScrollTo(element, 800);
+    }, 400);
 
-      if(hasSearch || hasTag) {
-        const params = new URLSearchParams();
-        if(hasSearch) {
-          params.append('q', query.trim());
-        }
-        if(hasTag) {
-          params.append('tag', selectedTag);
-        }
+    return () => clearTimeout(timer);
+  }, [search, activeTag, visibleFaqs]);
 
-        url = `${API_BASE_URL}/search?${params.toString()}`;
-      } else {
-        url = `${API_BASE_URL}/faqs`;
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if(!response.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load FAQs');
-      }
-
-      const mappedFaqs = data.data.map(item => ({
-        id : item._id,
-        question : item.question,
-        answer : item.answer,
-        tag : item.tag || 'general',
-        votes : item.helpful?.yes || 0,
-        answers : 0
-      }));
-
-      setFaqs(mappedFaqs);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // REFETCH WHEN SEARCH QUERY OR SELECTED TAG CHANGES
-  useEffect(() => {
-    fetchFAQs();
-  }, [query, selectedTag]);
-
-  // SCROLL PROGRESS BAR
-  useEffect(() => {
-    const onScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      setScrollProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // LOADING STATE 
-  if(loading && faqs.length === 0) {
-    return (
-      <div className="home-page">
-        <div className="loading-spinner">Loading FAQs...</div>
-      </div>
-    );
-  }
-
-  // ERROR STATE 
-  if(error && faqs.length === 0) {
-    return (
-      <div className="home-page">
-        <div className="error-message">Error : {error}</div>
-      </div>
-    );
-  }
-
-  // RENDER DOM
   return (
-    <div className="home-page">
-
-      {/* SCROLL PROGRESS INDICATOR - AT TOP BAR */}
-
-      <div className="scroll-progress" style={{ width: `${scrollProgress}%` }} aria-hidden />
-      
-      {/* BACKGROUND ELEMENTS */}
-      
-      <div className="home-page__grid-bg" aria-hidden />
-      <div className="home-page__glow-orb home-page__glow-orb--cyan" aria-hidden />
-      <div className="home-page__glow-orb home-page__glow-orb--magenta" aria-hidden />
-
-      {/* HEADER SECTION WITH LOGO, SEARCH BAR, ASK BUTTON, THEME TOGGLE AND USER */}
-
-      <header className="home-page__header">
-        <div className="home-page__header-container">
-
-          {/* LOGO OF THE PLATFORM */}
-
-          <span className="home-page__logo">
-            VINS<span className="home-page__logo-highlight"> FAQ SERVER</span>
+    <div className="vins-page">
+      {/* Navbar */}
+      <nav className="vins-nav">
+        <div className="vins-nav-inner">
+          <span className="vins-nav-logo">
+            VINS <span>FAQ SERVER</span>
           </span>
 
-          {/* SEARCH BAR */}
+          <div className="vins-nav-search">
+            <span className="vins-nav-search-icon">
+              <Search size={14} />
+            </span>
 
-          <div className="home-page__search-wrapper">
-            <Search className="home-page__search-icon" />
             <input
-              type="text"
-              placeholder="Search existing questions..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className={`home-page__search-input ${query ? "home-page__search-input--active" : ""}`}
+              placeholder="Search FAQs…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          {/* ASK BUTTON - NAVIGATE TO DISCUSSION PAGE */}
+          <div className="vins-nav-actions">
+            <button
+              className="vins-btn vins-btn-primary"
+              onClick={() => onNavigate("discussion")}
+            >
+              <MessageSquare size={14} />
+              Ask Question
+            </button>
 
-          <button
-            type="button"
-            onClick={() => onNavigate("discussion")}
-            className="home-page__ask-btn"
-          >
-            Ask Question
-          </button>
+            <ThemeToggle dark={dark} onToggle={onToggleTheme} />
 
-          <ThemeToggle dark={dark} onToggle={onToggleTheme} />
-
-          {/* USER PROFILE OR LOGIN SECTION */}
-
-          {user ? (
-
-            // IF USER IS LOGGED IN - SHOW AVATAR THAT LEADS TO PROFILE OR ADMIN PAGE
+            {user ? (
+              <div
+                className="vins-btn vins-btn-ghost"
+                style={{ background: user.avatarColor }}
+                onClick={() =>
+                  onNavigate(user.role === "admin" ? "admin" : "profile")
+                }
+                title={user.name}
+              >
+                <Users size={14} />
+              </div>
+            ) : (
+              <button
+                className="vins-btn vins-btn-ghost"
+                onClick={onRequestLogin}
+              >
+                Login
+              </button>
+            )}
 
             <button
-              type="button"
-              onClick={() => 
-                onNavigate(user.role === "admin" ? "admin" : "profile")
-              }
-              className="home-page__user-avatar"
-              title={user.role === "admin" ? "Admin Dashboard" : "Profile"}
+              className="vins-btn vins-btn-ghost"
+              onClick={() => setChatOpen(true)}
+              style={{ gap: 6 }}
             >
-              <span className="home-page__user-avatar-text">{user.avatar}</span>
+              <Sparkles size={14} />
+              VINS Assistant
             </button>
-          ) : (
-
-            // IF NOT LOOGED IN - SHOW LOGIN BUTTON
-
-            <button
-              type="button"
-              onClick={onRequestLogin}
-              className="home-page__login-btn"
-            >
-              LOGIN
-            </button>
-          )}
+          </div>
         </div>
-      </header>
+      </nav>
 
-      {/* HERO SECTION WITH TITLE AND DESCRIPTION */}
+      {/* Hero */}
+      <section style={{ borderBottom: "1px solid var(--vins-border)" }}>
+        <div className="vins-hero">
+          <div className="vins-hero-eyebrow">
+            <BookOpen size={10} />
+            CROWD-SOURCED KNOWLEDGE
+          </div>
 
-      <div className="home-page__hero">
-        <p className="home-page__hero-badge">Community Knowledge Base</p>
-        <h1 className="home-page__hero-title">Crowd-Sourced FAQ</h1>
-        <p className="home-page__hero-description">
-          Answers written and voted on by the community. If your question
-          isn't here, post it in the discussion board.
-        </p>
-      </div>
+          <h3>
+            Every answer you need,
+            <br />
+            <em>built by the community</em>
+          </h3>
+        </div>
+      </section>
 
-      {/* TAGS FILTERS */}
+      {/* FAQ Section */}
+      <main className="vins-container" style={{ flex: 1 }}>
+        <div className="vins-section">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                letterSpacing: "-0.4px",
+              }}
+            >
+              <HelpCircle
+                size={18}
+                style={{
+                  display: "inline",
+                  marginRight: 8,
+                  color: "var(--vins-primary)",
+                  verticalAlign: "middle",
+                }}
+              />
+              Frequently Asked Questions
+            </h2>
 
-      <div className="home-page__filters">
-        <div className="home-page__filters-container">
-          {availableTags.map((tag) => {
-            const displayTag = tag === "All" ? "All" : capitalise(tag);
-            const isActive = selectedTag === tag;
+            <span
+              style={{
+                fontFamily: "var(--vins-font-mono)",
+                fontSize: 12,
+                color: "var(--vins-fg-muted)",
+              }}
+            >
+              {visibleFaqs.length} of {FAQS.length} shown
+            </span>
+          </div>
 
-            const additionalClass = tag === "All" ? "home-page__filter-btn--all" : `home-page__filter-btn--${tag}`; 
-            return (
+          {/* Tag Filters */}
+          <div className="vins-tag-bar">
+            {allTags.map((tag) => (
               <button
                 key={tag}
-                type="button"
-                onClick={() => setSelectedTag(tag)}
-                className={`home-page__filter-btn ${additionalClass} ${isActive ? "home-page__filter-btn--active" : ""}`}
+                className={`vins-tag-filter-btn ${
+                  activeTag === tag ? "active" : ""
+                }`}
+                onClick={() => setActiveTag(tag)}
               >
-                {displayTag.toUpperCase()}
+                {tag}
               </button>
-            );
-          })}
-        </div>
-      </div>
+            ))}
+          </div>
 
-      {/* MAIN SECTION WITH FAQ LIST OR EMPTY STATE */}
-
-      <main className="home-page__main">
-        {faqs.length === 0 ? (
-
-          // EMPTY STATE - NO FAQ MATCH SEARCH
-
-          <div className="home-page__empty">
-            <p className="home-page__empty-message">
-              No FAQs found. {query && `No matches for "${query}". `}
-              Try a different search or post a new question.
-            </p>
-            <button
-              type="button"
-              onClick={() => onNavigate("discussion")}
-              className="home-page__empty-action"
+          {/* FAQ List */}
+          {visibleFaqs.length > 0 ? (
+            <div className="vins-faq-stack">
+              {visibleFaqs.map((faq) => (
+                <FAQItem
+                  key={faq.id}
+                  faq={faq}
+                  search={search}
+                  innerRef={(el) => (faqRefs.current[faq.id] = el)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "48px 0",
+                color: "var(--vins-fg-muted)",
+                fontSize: 14,
+              }}
             >
-              Post this question →
+              No FAQs available.
+            </div>
+          )}
+
+          {/* CTA */}
+          <div className="vins-cta-strip">
+            <div>
+              <h3>Can't find what you're looking for?</h3>
+              <p>
+                Post your question in the community discussion — someone will
+                answer within hours.
+              </p>
+            </div>
+
+            <button
+              className="vins-btn vins-btn-primary"
+              style={{ height: 40, padding: "0 18px", flexShrink: 0 }}
+              onClick={() => onNavigate("discussion")}
+            >
+              Go to Discussion
+              <ArrowRight size={14} />
             </button>
           </div>
-        ) : (
-
-          // NORMAL STATE - LIST OF FAQ ITEMS
-
-          <div className="home-page__faq-list">
-            {faqs.map((faq, index) => {
-              const isOpen = expandedId === faq.id;
-              const slug = faq.tag;
-              return (
-                <div 
-                  key={faq.id} 
-                  className={`faq-item faq-item--${slug} ${isOpen ? "faq-item--expanded" : ""}`}
-                  style={{ animationDelay: `${index * 0.07}s` }}
-                >
-
-                  {/* CLICKABLE HEADER THAT EXPANDS OR COLLAPSES - CONTAINS ANSWER */}
-
-                  <button
-                    type="button"
-                    className="faq-item__trigger"
-                    onClick={() => setExpandedId(isOpen ? null : faq.id)}
-                    aria-expanded={isOpen}
-                  >
-
-                    {/* TAG OF FAQ AND META DATA */}
-
-                    <div className="faq-item__content">
-                      <div className="faq-item__meta">
-                        <span className="faq-item__category">
-                          {capitalise(faq.tag).toUpperCase()}
-                        </span>
-                        <span className="faq-item__votes">
-                          <ChevronUp className="faq-item__votes-icon" />
-                          {faq.votes}
-                        </span>
-                      </div>
-                      <p className="faq-item__question">
-                        {highlightText(faq.question, query)}
-                      </p>
-                    </div>
-                    <div className="faq-item__expand-icon">
-                      <ChevronDown
-                        className={`faq-item__chevron ${isOpen ? "faq-item__chevron--open" : ""}`}
-                      />
-                    </div>
-                  </button>
-
-                  {/* EXPANDED ANSWER - WHEN IS OPEN IS TRUE */}
-
-                  {isOpen && (
-                    <div className="faq-item__answer">
-                      <div className="faq-item__answer-inner">
-                      <p className="faq-item__answer-prefix">&gt; answer:</p>
-                      <p className="faq-item__answer-text">
-                        {highlightText(faq.answer, query)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* CALL TO ACTION SECTION - WITH POST QUESTION BUTTON DIRECT TO DISCUSSION PAGE */}
-
-        <div className="home-page__cta">
-          <p className="home-page__cta-text">Can't find your answer?</p>
-          <button
-            type="button"
-            onClick={() => onNavigate("discussion")}
-            className="home-page__cta-btn"
-          >
-            Post a New Question
-          </button>
         </div>
       </main>
+
+      {chatOpen && <ChatBot onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
