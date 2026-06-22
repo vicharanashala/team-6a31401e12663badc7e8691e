@@ -187,19 +187,19 @@ const getQuestionsByTag = async (req, res) => {
 const createQuestion = async (req, res) => {
     try {
         // GET FOLLOWING FROM THE USER
-        const { question, description, tag_id } = req.body;
+        const { title, description, tag_id } = req.body;
 
         // VALIDATE IF QUESTION TEXT IS EMPTY OR NOT
-        if(!question || !question.trim()) {
+        if(!title || !title.trim()) {
             return res.status(400).json({
                 success : false,
-                message : 'Question is required'
+                message : 'Question title is required'
             });
         }
 
         // CREATE NEW QUESTION
         const newQuestion = await Question.create({
-            question : question.trim(),
+            title : title.trim(),
             description : description || '',
             tag_id : tag_id && tag_id.trim() ? tag_id : null,
             user_id : req.user_id,
@@ -229,7 +229,7 @@ const createQuestion = async (req, res) => {
 const updateQuestion = async (req, res) => {
     try {
         const { id } = req.params;
-        const { question, description, tag_id } = req.body;
+        const { title, description, tag_id } = req.body;
 
         // FIND QUESTION BY ID 
         const questionDoc = await Question.findById(id);
@@ -252,7 +252,7 @@ const updateQuestion = async (req, res) => {
         }
 
         // UPDATE THE FIELD PROVIDED
-        if(question) questionDoc.question = question.trim();
+        if(title) questionDoc.title = title.trim();
         if (description !== undefined) questionDoc.description = description;
         if(tag_id) questionDoc.tag_id = tag_id;
 
