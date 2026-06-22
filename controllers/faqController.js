@@ -131,7 +131,7 @@ const convertToFAQ = async (req, res) => {
             });
         }
 
-        const MIN_UPVOTES = parseInt(process.env.MIN_UPVOTES_FOR_FAQ) || 10;
+        const MIN_UPVOTES = parseInt(process.env.MIN_UPVOTES_FOR_FAQ) || 25;
 
         // VALIDATE ANSWER HAS MINIMUM UPVOTES
         if(bestAnswer.up_votes < MIN_UPVOTES) {
