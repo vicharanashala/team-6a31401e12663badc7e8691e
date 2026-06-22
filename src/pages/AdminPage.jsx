@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, ChevronUp, Check, X, Tag, Users, FileQuestion, Pencil, Trash2, Shield, Plus, TriangleRight } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import "../styles/AdminPage.css";
-import { INITIAL_FAQ_CANDIDATES, INITIAL_TAGS, INITIAL_PLATFORM_USERS } from "../data/admindata";
+import { faqAPI, tagAPI, userAPI } from "../services/api";
 
 const FAQ_UPVOTE_THRESHOLD = 25;
 
@@ -14,47 +14,111 @@ const TABS = [
 
 export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState("faq");
-  const [candidates, setCandidates] = useState(INITIAL_FAQ_CANDIDATES);
-  const [tags, setTags] = useState(INITIAL_TAGS);
-  const [platformUsers, setPlatformUsers] = useState(INITIAL_PLATFORM_USERS);
-  const [actionMessage, setActionMessage] = useState("");
+  const [candidates, setCandidates] = useState([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [processedCandidates, setProcessedCandidates] = useState([]);
 
+  const [tags, setTags] = useState([]);
+  const [loadingTags, setLoadingTags] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [editingTagId, setEditingTagId] = useState(null);
   const [editingTagName, setEditingTagName] = useState("");
 
-  const eligibleCandidates = candidates.filter(
-    (c) => c.upvotes >= FAQ_UPVOTE_THRESHOLD && c.status === "pending",
-  );
-  const processedCandidates = candidates.filter((c) => c.status !== "pending");
+  const [platformUsers, setPlatformUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [actionMessage, setActionMessage] = useState("");
 
   function showMessage(text) {
     setActionMessage(text);
     setTimeout(() => setActionMessage(""), 3000);
   }
 
-  function handleFaqDecision(id, decision) {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: decision } : c)),
-    );
-    showMessage(
-      decision === "approved"
-        ? "Question approved and queued for FAQ publication on the home page."
-        : "Question rejected and will remain in discussion only.",
-    );
+  useEffect(() => {
+    if(activeTab === "faq") fetchCandidates();
+    if(activeTab === "tags") fetchTags();
+    if(activeTab === "users") fetchUsers();
+  }, [activeTab]);
+
+  async function fetchCandidates() {
+    setLoadingCandidates(true);
+    try{
+      const data = await faqAPI.getReadyForFAQ();
+      const mapped = data.map(item => ({
+          id: item._id,
+          title: item.title,
+          body: item.description || '',
+          upvotes: item.bestAnswerVotes || 0,
+          author: item.author || 'Unknown',
+          tags: item.tags || (item.tag ? [item.tag] : []),
+          topAnswer: item.topAnswer || ''
+      }));
+      setCandidates(mapped);
+    } catch (err) {
+      showMessage("Failed to load FAQ candidates : " + err.message);
+      setCandidates([]);
+    } finally {
+      setLoadingCandidates(false);
+    }
   }
 
-  function handleAddTag(e) {
+  async function handleFaqDecision(id, decision) {
+    const removed = candidates.find(c => c.id === id);
+    setCandidates(prev => prev.filter(c => c.id !== id));
+    setProcessedCandidates(prev => [...prev, { ...removed, status : decision }]);
+
+    if(decision === "approved") {
+      try {
+        await faqAPI.convertToFAQ(id);
+        showMessage("Question approved and converted to FAQ.");
+      } catch (err) {
+        showMessage("Failed to convert : " + err.message);
+        setCandidates(prev => [...prev, removed]);
+        setProcessedCandidates(prev => prev.filter(p => p.id !== id));
+      }
+    } else {
+      showMessage("Question rejected and will remian in discussion only.");
+    }
+  }
+
+  async function fetchTags() {
+    setLoadingTags(true);
+    try {
+      const data = await tagAPI.getAll();
+      const mapped = data.map(tag => ({
+          id: tag._id,
+          name: tag.tag_name,
+          questionCount: tag.questionCount ?? 0  
+        }));
+      setTags(mapped);
+    } catch (err) {
+      showMessage("Failed to Load tags : " + err.message);
+    } finally {
+      setLoadingTags(false);
+    }
+  }
+
+  async function handleAddTag(e) {
     e.preventDefault();
-    const name = newTagName.trim().toLowerCase().replace(/\s+/g, "-");
-    if (!name) return;
-    if (tags.some((t) => t.name === name)) {
+    const name = newTagName.trim();
+    if(!name) return;
+    if(tags.some(t => t.name?.toLowerCase() === name.toLowerCase())) {
       showMessage("A tag with this name already exists.");
       return;
     }
-    setTags((prev) => [...prev, { id: Date.now(), name, questionCount: 0 }]);
-    setNewTagName("");
-    showMessage(`Tag "${name}" created successfully.`);
+
+    try {
+      const newTag = await tagAPI.create(name);
+      setTags(prev => [...prev, {
+        id: newTag._id,
+        name: newTag.tag_name,
+        questionCount: 0
+      }]);
+      setNewTagName("");
+      showMessage(`Tag "${name}" created successfully.`);
+    } catch (err) {
+      showMessage("Failed to create tag : " + err.message);
+    }
   }
 
   function startEditTag(tag) {
@@ -62,49 +126,91 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     setEditingTagName(tag.name);
   }
 
-  function saveEditTag() {
-    const name = editingTagName.trim().toLowerCase().replace(/\s+/g, "-");
+  async function saveEditTag() {
+    const name = editingTagName.trim();
     if (!name) return;
-    if (tags.some((t) => t.name === name && t.id !== editingTagId)) {
+    if (tags.some(t => t.name?.toLowerCase() === name.toLowerCase() && t.id !== editingTagId)) {
       showMessage("A tag with this name already exists.");
       return;
     }
-    setTags((prev) =>
-      prev.map((t) => (t.id === editingTagId ? { ...t, name } : t)),
-    );
-    setEditingTagId(null);
-    setEditingTagName("");
-    showMessage("Tag updated successfully.");
+    
+    try {
+      const updated = await tagAPI.update(editingTagId, name);
+      setTags(prev => prev.map(t => t.id === editingTagId ? { ...t, name: updated.tag_name } : t));
+      setEditingTagId(null);
+      setEditingTagName("");
+      showMessage("Tag updated successfully.");
+    } catch (err) {
+      showMessage("Failed to update tag : " + err.message);
+    }
   }
 
-  function deleteTag(id) {
+  async function deleteTag(id) {
     const tag = tags.find((t) => t.id === id);
-    setTags((prev) => prev.filter((t) => t.id !== id));
-    showMessage(`Tag "${tag?.name}" deleted.`);
+    if(!tag) return;
+
+    try {
+      await tagAPI.delete(id);
+      setTags(prev => prev.filter(t => t.id !== id));
+      showMessage(`Tag "${tag.name}" deleted.`);
+    } catch (err) {
+      showMessage("Failed to delete tag : " + err.message);
+    }
   }
 
-  function deleteUser(id) {
+  async function fetchUsers() {
+    setLoadingUsers(true);
+    try {
+      const data = await userAPI.getAll();
+      const mapped = data.map(user => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          joined: user.created_at,
+          handle: user.handle || `@${user.name.toLowerCase().replace(/\s/g, '_')}`
+      }));
+      setPlatformUsers(mapped);
+    } catch (err) {
+      showMessage("Failed to load Users : " + err.message);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
+
+  async function promoteToAdmin(id) {
+    const target = platformUsers.find(u => u.id === id);
+    if(!target) return;
+
+    try {
+      const updated = await userAPI.promoteToAdmin(id);
+      setPlatformUsers(prev => prev.map(u => u.id === id ? { ...u, ...updated } : u));
+      showMessage(`${target.name} is now an admin.`);
+    } catch (err) {
+      showMessage("Failed to promote users : " + err.message);
+    }
+  }
+
+  async function deleteUser(id) {
     const target = platformUsers.find((u) => u.id === id);
     if(!target) return;
 
-    if(target.id === 1 || target.id === 4) {
-      showMessage("Admin's accounts cannot be deleted.");
+    if(target.role === "admin") {
+      showMessage("Admin accounts cannot be deleted.");
       return;
     }
-    if (target?.email === user?.email) {
+    if(target.email === user?.email) {
       showMessage("You cannot delete your own account.");
       return;
     }
-    setPlatformUsers((prev) => prev.filter((u) => u.id !== id));
-    showMessage(`User ${target?.name} removed from the platform.`);
-  }
 
-  function promoteToAdmin(id) {
-    setPlatformUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, role: "admin" } : u)),
-    );
-    const target = platformUsers.find((u) => u.id === id);
-    showMessage(`${target?.name} is now an admin.`);
+    try {
+      await userAPI.delete(id);
+      setPlatformUsers(prev => prev.filter(u => u.id !== id));
+      showMessage(`User ${target.name} removed from the platform.`);
+    } catch (err) {
+      showMessage("Failed to delete user : " + err.message);
+    }
   }
 
   return (
@@ -173,11 +279,13 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
               </p>
             </div>
 
-            {eligibleCandidates.length === 0 ? (
+            {loadingCandidates ? (
+              <div className="admin-loading">Loading FAQ candidates...</div>
+            ) : candidates.length === 0 ? (
               <p className="admin-section__empty">No pending questions meet the upvote threshold.</p>
             ) : (
               <div className="admin-card-list">
-                {eligibleCandidates.map((item) => (
+                {candidates.map((item) => (
                   <article key={item.id} className="admin-faq-card">
                     <div className="admin-faq-card__header">
                       <h3 className="admin-faq-card__title">{item.title}</h3>
@@ -244,9 +352,7 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
                           <td>{item.title}</td>
                           <td>{item.upvotes}</td>
                           <td>
-                            <span
-                              className={`admin-status admin-status--${item.status}`}
-                            >
+                            <span className={`admin-status admin-status--${item.status}`}>
                               {item.status}
                             </span>
                           </td>
@@ -283,81 +389,85 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
               </button>
             </form>
 
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Tag</th>
-                    <th>Questions</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tags.map((tag) => (
-                    <tr key={tag.id}>
-                      <td>
-                        {editingTagId === tag.id ? (
-                          <input
-                            type="text"
-                            value={editingTagName}
-                            onChange={(e) => setEditingTagName(e.target.value)}
-                            className="admin-input admin-input--inline"
-                          />
-                        ) : (
-                          <span className="admin-tag-name">{tag.name}</span>
-                        )}
-                      </td>
-                      <td>{tag.questionCount}</td>
-                      <td>
-                        <div className="admin-table__actions">
-                          {editingTagId === tag.id ? (
-                            <>
-                              <button
-                                type="button"
-                                className="admin-icon-btn admin-icon-btn--save"
-                                onClick={saveEditTag}
-                                title="Save"
-                              >
-                                <Check className="admin-icon-btn__icon" />
-                              </button>
-                              <button
-                                type="button"
-                                className="admin-icon-btn"
-                                onClick={() => setEditingTagId(null)}
-                                title="Cancel"
-                              >
-                                <X className="admin-icon-btn__icon" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                className="admin-icon-btn"
-                                onClick={() => startEditTag(tag)}
-                                title="Edit tag"
-                              >
-                                <Pencil className="admin-icon-btn__icon" />
-                              </button>
-                              <button
-                                type="button"
-                                className="admin-icon-btn admin-icon-btn--danger"
-                                onClick={() => deleteTag(tag.id)}
-                                title="Delete tag"
-                              >
-                                <Trash2 className="admin-icon-btn__icon" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+            {loadingTags ? (
+              <div className="admin-loading">Loading Tags...</div>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Tag</th>
+                      <th>Questions</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+                  </thead>
+                  <tbody>
+                    {tags.map((tag) => (
+                      <tr key={tag.id}>
+                        <td>
+                          {editingTagId === tag.id ? (
+                            <input
+                              type="text"
+                              value={editingTagName}
+                              onChange={(e) => setEditingTagName(e.target.value)}
+                              className="admin-input admin-input--inline"
+                            />
+                          ) : (
+                            <span className="admin-tag-name">{tag.name}</span>
+                          )}
+                        </td>
+                        <td>{tag.questionCount || 0}</td>
+                        <td>
+                          <div className="admin-table__actions">
+                            {editingTagId === tag.id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="admin-icon-btn admin-icon-btn--save"
+                                  onClick={saveEditTag}
+                                  title="Save"
+                                >
+                                  <Check className="admin-icon-btn__icon" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-icon-btn"
+                                  onClick={() => setEditingTagId(null)}
+                                  title="Cancel"
+                                >
+                                  <X className="admin-icon-btn__icon" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="admin-icon-btn"
+                                  onClick={() => startEditTag(tag)}
+                                  title="Edit tag"
+                                >
+                                  <Pencil className="admin-icon-btn__icon" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-icon-btn admin-icon-btn--danger"
+                                  onClick={() => deleteTag(tag.id)}
+                                  title="Delete tag"
+                                >
+                                  <Trash2 className="admin-icon-btn__icon" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            </section>
+          )}
 
         {activeTab === "users" && (
           <section className="admin-section">
@@ -368,58 +478,62 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
               </p>
             </div>
 
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Handle</th>
-                    <th>Role</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platformUsers.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.name}</td>
-                      <td>{u.email}</td>
-                      <td>{u.handle}</td>
-                      <td>
-                        <span className={`admin-role admin-role--${u.role}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td>{u.joined}</td>
-                      <td>
-                        <div className="admin-table__actions">
-                          {u.role === "user" && (
+            {loadingUsers ? (
+              <div className="admin-loading">Loading Users...</div>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Handle</th>
+                      <th>Role</th>
+                      <th>Joined</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platformUsers.map((u) => (
+                      <tr key={u.id}>
+                        <td>{u.name}</td>
+                        <td>{u.email}</td>
+                        <td>{u.handle || `@${u.name.toLowerCase().replace(/\s/g, '_')}`}</td>
+                        <td>
+                          <span className={`admin-role admin-role--${u.role}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>{u.joined ? new Date(u.joined).toLocaleDateString() : "Unknown"}</td>
+                        <td>
+                          <div className="admin-table__actions">
+                            {u.role === "user" && (
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn--small admin-btn--promote"
+                                onClick={() => promoteToAdmin(u.id)}
+                              >
+                                <Shield className="admin-btn__icon" />
+                                Make Admin
+                              </button>
+                            )}
                             <button
                               type="button"
-                              className="admin-btn admin-btn--small admin-btn--promote"
-                              onClick={() => promoteToAdmin(u.id)}
+                              className="admin-btn admin-btn--small admin-btn--reject"
+                              onClick={() => deleteUser(u.id)}
+                              disabled={u.email === user?.email || u.role === "admin"}
                             >
-                              <Shield className="admin-btn__icon" />
-                              Make Admin
+                              <Trash2 className="admin-btn__icon" />
+                              Delete
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="admin-btn admin-btn--small admin-btn--reject"
-                            onClick={() => deleteUser(u.id)}
-                            disabled={u.email === user?.email || u.role === "admin"}
-                          >
-                            <Trash2 className="admin-btn__icon" />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
       </main>

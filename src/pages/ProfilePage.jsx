@@ -1,94 +1,137 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, ChevronUp, MessageSquare, Award } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import { useCountUp } from "../hooks/useCountUp";
+import { userAPI, questionAPI, answerAPI } from "../services/api";
 import "../styles/ProfilePage.css";
-
-const USER = {
-  name: "Aashu Goswami",
-  handle: "@aashu_goswami",
-  avatar: "AG",
-  bio: "Software engineer. Obsessed with clean documentation and helpful communities.",
-  joined: "March 2023",
-  totalUpvotes: 293,
-  totalQuestions: 4,
-  totalAnswers: 4,
-};
-
-const MY_QUESTIONS = [
-  {
-    id: 1,
-    title: "How do I reset my password if I no longer have access to my email?",
-    answers: 2,
-    time: "2h ago",
-    tags: ["account", "security"],
-  },
-  {
-    id: 2,
-    title: "Is there a way to follow specific tags or topics?",
-    answers: 0,
-    time: "1d ago",
-    tags: ["feature", "notifications"],
-  },
-  {
-    id: 3,
-    title: "Can I export my answer history as a PDF?",
-    answers: 1,
-    time: "3d ago",
-    tags: ["account", "export"],
-  },
-  {
-    id: 4,
-    title: "Why are some answers marked with an orange border?",
-    answers: 3,
-    time: "1w ago",
-    tags: ["general"],
-  },
-];
-
-const MY_ANSWERS = [
-  {
-    id: 1,
-    question: "What is this platform and how does it work?",
-    excerpt: "This is a crowd-sourced FAQ platform where the community posts questions and votes on the most helpful responses...",
-    votes: 142,
-    time: "5d ago",
-  },
-  {
-    id: 2,
-    question: "How does the upvote system work?",
-    excerpt: "Any logged-in user can upvote an answer they find helpful. Upvotes signal quality to other readers...",
-    votes: 76,
-    time: "1w ago",
-  },
-  {
-    id: 3,
-    question: "Can I edit or delete my questions and answers?",
-    excerpt: "Yes. You can edit your own posts at any time from your profile page. Deletion is available as long as...",
-    votes: 54,
-    time: "2w ago",
-  },
-  {
-    id: 4,
-    question: "How do I report a misleading answer?",
-    excerpt: "Use the flag icon on any post to report it. The moderation team reviews all flagged content within 24 hours.",
-    votes: 21,
-    time: "3w ago",
-  },
-];
 
 const BADGES = [
   { label: "First Answer", icon: "✦", earned: true },
   { label: "Top 10%", icon: "◆", earned: true },
-  { label: "Helpful Voice", icon: "▲", earned: true }
+  { label: "Helpful Voice", icon: "▲", earned: true },
+  { label: "Century", icon: "●", earned: false }
 ];
 
 export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState("answers");
-  const displayUser = user ? { ...USER, ...user } : USER;
-  const upvotes = useCountUp(USER.totalUpvotes);
-  const questions = useCountUp(USER.totalQuestions);
-  const answers = useCountUp(USER.totalAnswers);
+  const [profile, setProfile] = useState(null);
+  const [userQuestions, setUserQuestions] = useState([]);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const userId = user?.id;
+
+  useEffect(() => {
+    if(!userId) {
+      setError("User not logged in");
+      setLoading(false);
+      return;
+    }
+
+    const fetchUserData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [profileData, statsData, questionsData, answersData] = await Promise.all([
+          userAPI.getById(userId),
+          userAPI.getStats(userId),
+          questionAPI.getByUser(userId),
+          answerAPI.getByUser(userId)
+        ]);
+
+        setProfile({
+          name : profileData.name,
+          handle : profileData.handle || `@${profileData.name.toLowerCase().replace(/\s/g, '_')}`,
+          avatar : profileData.avatar || profileData.name?.charAt(0)?.toUpperCase() || "?",
+          bio : profileData.bio || "No bio yet.",
+          joined : profileData.created_at || "Unknown"
+        });
+
+        setStats({
+          totalUpvotes : statsData.stats?.upvotes_received || 0,
+          totalQuestions : statsData.stats?.questions_asked || 0,
+          totalAnswers : statsData.stats?.answers_given || 0
+        });
+
+        const mappedQuestions = questionsData.map(q => ({
+          id : q._id,
+          title : q.question,
+          answers : q.answers_count || 0,
+          time : q.created_at,
+          tags : q.tag_id ? [q.tag_id.tag_name] : []
+        }));
+        setUserQuestions(mappedQuestions);
+
+        const mappedAnswers =  answersData.map(a => ({
+          id : a._id,
+          question : a.question_id?.title || "Unknown question",
+          excerpt : a.answer?.slice(0, 100) + (a.answer?.length > 100 ? "..." : ""),
+          votes : a.up_votes || 0,
+          time : a.created_at
+        }));
+        setUserAnswers(mappedAnswers);
+      } catch (err) {
+        setError(err.message || "Failed to load profile data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, [userId]);
+
+  if(loading) {
+    return (
+      <div className="profile-page">
+        <header className="profile-page__header">
+          <div className="profile-page__header-container">
+            <button onClick={() => onNavigate("home")} className="profile-page__back-btn">
+              <ArrowLeft className="profile-page__back-icon" />
+            </button>
+            <span className="profile-page__logo">
+              VINS<span className="profile-page__logo-highlight">FAQ SERVER</span>
+            </span>
+            <span className="profile-page__header-badge">/ PROFILE</span>
+            <div className="logout-container">
+              <ThemeToggle dark={dark} onToggle={onToggleTheme} />
+              <button onClick={onLogout} className="logout-btn">LOGOUT</button>
+            </div>
+          </div>
+        </header>
+        <main className="profile-page__main">
+          <div className="profile-loading">Loading Profile...</div>
+        </main>
+      </div>
+    );
+  }
+
+  if(error) {
+    return (
+      <div className="profile-page">
+        <header className="profile-page__header">...</header>
+        <main className="profile-page__main">
+          <div className="profile-error">Error : {error}</div>
+        </main>
+      </div>
+    );
+  }
+
+  if(!profile) {
+    return (
+      <div className="profile-page">
+        <header className="profile-page__header">...</header>
+        <main className="profile-page__main">
+          <div className="profile-error">User profile not found.</div>
+        </main>
+      </div>
+    );
+  }
+
+  const upvotes = useCountUp(stats?.totalUpvotes || 0);
+  const questions = useCountUp(stats?.totalQuestions || 0);
+  const answers = useCountUp(stats?.totalAnswers || 0);
 
   return (
     <div className="profile-page">
@@ -117,13 +160,13 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
         {/* Profile card */}
         <div className="profile-card">
           <div className="profile-card__avatar">
-            <span className="profile-card__avatar-text">{displayUser.avatar}</span>
+            <span className="profile-card__avatar-text">{profile.avatar}</span>
           </div>
           <div className="profile-card__info">
-            <h1 className="profile-card__name">{displayUser.name}</h1>
-            <p className="profile-card__handle">{displayUser.handle}</p>
-            <p className="profile-card__bio">{displayUser.bio}</p>
-            <p className="profile-card__joined">JOINED {displayUser.joined.toUpperCase()}</p>
+            <h1 className="profile-card__name">{profile.name}</h1>
+            <p className="profile-card__handle">{profile.handle}</p>
+            <p className="profile-card__bio">{profile.bio}</p>
+            <p className="profile-card__joined">JOINED {profile.joined.toUpperCase()}</p>
           </div>
         </div>
 
@@ -176,7 +219,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
               onClick={() => setActiveTab(tab)}
               className={`profile-tab ${activeTab === tab ? "profile-tab--active" : ""}`}
             >
-              {tab} ({tab === "answers" ? MY_ANSWERS.length : MY_QUESTIONS.length})
+              {tab} ({tab === "answers" ? userAnswers.length : userQuestions.length})
             </button>
           ))}
         </div>
@@ -184,40 +227,48 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
         {/* Tab content: Answers */}
         {activeTab === "answers" && (
           <div className="answers-list">
-            {MY_ANSWERS.map((ans) => (
-              <div key={ans.id} className="answer-item">
-                <div className="answer-item__votes">
-                  <ChevronUp className="answer-item__upvote-icon" />
-                  <span className="answer-item__votes-count">{ans.votes}</span>
+            {userAnswers.length === 0 ? (
+              <div className="empty-state">No answers yet.</div>
+            ) : (
+              userAnswers.map((ans) => (
+                <div key={ans.id} className="answer-item">
+                  <div className="answer-item__votes">
+                    <ChevronUp className="answer-item__upvote-icon" />
+                    <span className="answer-item__votes-count">{ans.votes}</span>
+                  </div>
+                  <div className="answer-item__content">
+                    <p className="answer-item__question">{ans.question}</p>
+                    <p className="answer-item__excerpt">{ans.excerpt}</p>
+                    <p className="answer-item__time">{ans.time}</p>
+                  </div>
                 </div>
-                <div className="answer-item__content">
-                  <p className="answer-item__question">{ans.question}</p>
-                  <p className="answer-item__excerpt">{ans.excerpt}</p>
-                  <p className="answer-item__time">{ans.time}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
         {/* Tab content: Questions */}
         {activeTab === "questions" && (
           <div className="questions-list">
-            {MY_QUESTIONS.map((q) => (
-              <div key={q.id} className="question-item">
-                <p className="question-item__title">{q.title}</p>
-                <div className="question-item__meta">
-                  {q.tags.map((tag) => (
-                    <span key={tag} className="question-item__tag">{tag}</span>
-                  ))}
-                  <span className="question-item__answers-count">
-                    <MessageSquare className="question-item__icon" />
-                    {q.answers} answers
-                  </span>
-                  <span className="question-item__time">{q.time}</span>
+            {userQuestions.length === 0 ? (
+              <div className="empty-state">No questions asked yet.</div>
+            ) : (
+              userQuestions.map((q) => (
+                <div key={q.id} className="question-item">
+                  <p className="question-item__title">{q.title}</p>
+                  <div className="question-item__meta">
+                    {q.tags.map((tag) => (
+                      <span key={tag} className="question-item__tag">{tag}</span>
+                    ))}
+                    <span className="question-item__answers-count">
+                      <MessageSquare className="question-item__icon" />
+                      {q.answers} answers
+                    </span>
+                    <span className="question-item__time">{q.time}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </main>

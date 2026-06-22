@@ -1,23 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-const MOCK_USERS = [
-  {
-    email: "aashu@example.com",
-    password: "password123",
-    name: "Aashu Goswami",
-    handle: "@aashu_goswami",
-    avatar: "AG",
-    role: "user",
-  },
-  {
-    email: "admin@vins.com",
-    password: "admin123",
-    name: "VINS Admin",
-    handle: "@vins_admin",
-    avatar: "VA",
-    role: "admin",
-  },
-];
+import { authAPI } from "../services/api";
+import "../styles/AuthPage.css";
 
 export default function AuthPage({ onNavigate, onLogin }) {
   const [mode, setMode] = useState("login");
@@ -26,40 +10,70 @@ export default function AuthPage({ onNavigate, onLogin }) {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  function handleLogin(e) {
+  const [loading, setLoading] = useState(false);
+  
+  async function handleLogin(e) {
     e.preventDefault();
     setError("");
-    const user = MOCK_USERS.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (user) {
+    setLoading(true);
+
+    try {
+      const result = await authAPI.login({ email, password });
+      const { token, user} = result;
+      localStorage.setItem("token", token);
+
       onLogin({
-        name: user.name,
-        handle: user.handle,
-        avatar: user.avatar,
-        email: user.email,
-        role: user.role,
+        id : user.id,
+        name : user.name,
+        email : user.email,
+        role : user.role,
+        avatar : user.avatar || user.name?.charAt(0)?.toUpperCase() || "?",
+        handle : user.handle || `@${user.name.toLowerCase().replace(/\s/g, '_')}`
       });
-    } else {
-      setError("Invalid email or password.");
+    } catch (err) {
+      setError(err.message || "Login Failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handleRegister(e) {
+  async function handleRegister(e) {
     e.preventDefault();
     setError("");
+    setLoading(true);
+
     if (!name.trim() || !email.trim() || !password.trim()) {
       setError("All fields are required.");
+      setLoading(false);
       return;
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      setLoading(false);
       return;
     }
-    const handle = "@" + name.trim().toLowerCase().replace(/\s+/g, "_");
-    const avatar = name.trim().split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-    onLogin({ name: name.trim(), handle, avatar, email, role: "user" });
+    
+    try {
+      const result = await authAPI.register({ name, email, password });
+      const { token, user } = result;
+      localStorage.setItem("token", token);
+
+      const handle = user.handle || `@${name.trim().toLowerCase().replace(/\s+/g, "_")}`;
+      const avatar = user.avatar || name.trim().split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+
+      onLogin({
+        id : user.id,
+        name : user.name,
+        email : user.email,
+        role : user.role || "user",
+        avatar,
+        handle
+      });
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function switchMode(m) {
@@ -94,17 +108,13 @@ export default function AuthPage({ onNavigate, onLogin }) {
           <div className="auth-page__mode-toggle">
             <button
               onClick={() => switchMode("login")}
-              className={`auth-page__mode-btn ${
-                mode === "login" ? "auth-page__mode-btn--active" : ""
-              }`}
+              className={`auth-page__mode-btn ${mode === "login" ? "auth-page__mode-btn--active" : ""}`}
             >
               Login
             </button>
             <button
               onClick={() => switchMode("register")}
-              className={`auth-page__mode-btn ${
-                mode === "register" ? "auth-page__mode-btn--active" : ""
-              }`}
+              className={`auth-page__mode-btn ${mode === "register" ? "auth-page__mode-btn--active" : ""}`}
             >
               Register
             </button>
@@ -167,25 +177,20 @@ export default function AuthPage({ onNavigate, onLogin }) {
               </div>
             </div>
 
-            {error && (
-              <p className="auth-page__error">{error}</p>
-            )}
+            {error && (<p className="auth-page__error">{error}</p>)}
 
             <button
               type="submit"
               className="auth-page__submit-btn"
+              disabled={loading}
             >
-              {mode === "login" ? "Sign In" : "Create Account"}
+              {loading ? "Loading..." : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
 
           {mode === "login" && (
             <p className="auth-page__demo-note">
-              User: <span className="auth-page__demo-cred">aashu@example.com</span> /{" "}
-              <span className="auth-page__demo-cred">password123</span>
-              <br />
-              Admin: <span className="auth-page__demo-cred">admin@vins.com</span> /{" "}
-              <span className="auth-page__demo-cred">admin123</span>
+              Use the demo credentials from your backend or register a new account.
             </p>
           )}
 

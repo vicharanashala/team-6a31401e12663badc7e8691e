@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, ChevronUp, ChevronDown, MessageSquare, Sparkles, ArrowRight, Users, BookOpen, HelpCircle } from "lucide-react";
 import ChatBot from "../components/chatSidebar";
 import ThemeToggle from "../components/ThemeToggle";
-import { FAQS } from "../data/faqs";
-import { TAGS } from "../data/tags";
+import { faqAPI, tagAPI } from "../services/api";
 import "../styles/HomePage.css";
 
 function highlightText(text, query) {
@@ -38,8 +37,7 @@ function smoothScrollTo(element, duration = 2000) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    const ease =
-      progress < 0.5
+    const ease = progress < 0.5
         ? 2 * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
@@ -49,12 +47,13 @@ function smoothScrollTo(element, duration = 2000) {
       requestAnimationFrame(animation);
     }
   }
-
   requestAnimationFrame(animation);
 }
 
 function FAQItem({ faq, search, innerRef }) {
   const [open, setOpen] = useState(false);
+  const displayTag = faq.tag.charAt(0).toUpperCase() + faq.tag.slice(1);
+  const cssTag = faq.tag.toLowerCase();
 
   return (
     <div ref={innerRef} className={`vins-faq-item ${open ? "expanded" : ""}`}>
@@ -63,8 +62,8 @@ function FAQItem({ faq, search, innerRef }) {
         onClick={() => setOpen(o => !o)}
       >
         <div className="vins-faq-q-meta">
-          <span className={`vins-tag vins-tag-${faq.tag}`}>
-            {faq.tag}
+          <span className={`vins-tag vins-tag-${cssTag}`}>
+            {displayTag}
           </span>
 
           <span className="vins-faq-question">
@@ -88,33 +87,80 @@ function FAQItem({ faq, search, innerRef }) {
 }
 
 export default function HomePage({ onNavigate, onRequestLogin, user, dark, onToggleTheme }) {
+  const [faqs, setFaqs] = useState([]);
+  const [tags, setTags] = useState(["All"]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState("All");
   const [chatOpen, setChatOpen] = useState(false);
-
   const faqRefs = useRef({});
-  const allTags = TAGS;
-
-  const visibleFaqs = FAQS.filter(
-    (faq) => activeTag === "All" || faq.tag === activeTag
-  );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!search.trim()) return;
+    const fetchTags = async () => {
+      try {
+        const tagData = await tagAPI.getAll();
+        const tagNames = tagData.map(t => t.tag_name);
+        setTags(["All", ...tagNames]);
+      } catch (err) {
+        console.error("Failed to load tags : ", err);
+      }
+    };
+    fetchTags();
+  }, []);
 
-      const firstMatch = visibleFaqs.find(
-        (faq) => faq.question.toLowerCase().includes(search.toLowerCase()) 
+  useEffect(() => {
+    const fetchFAQs = async () => {
+      setLoading(true);
+      setError(null);
+
+      try{
+        let data;
+        if(search.trim() || (activeTag && activeTag !== "All")) {
+          data = await faqAPI.search(search.trim(), activeTag === "All" ? null : activeTag);
+        } else {
+          data = await faqAPI.getAll();
+        }
+
+        const mapped = data.map(item => ({
+          id : item._id,
+          question : item.question,
+          answer : item.answer,
+          tag : item.tag || 'All',
+          votes : item.helpful?.yes || 0
+        }));
+        setFaqs(mapped);
+      } catch (err) {
+        setError(err.message || "Failed to load FAQs");
+        setFaqs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    const debounceTimer = setTimeout(fetchFAQs, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [search, activeTag]);
+
+  useEffect(() => {
+    if(!search.trim() || !faqs.length) return;
+    
+    const timer = setTimeout(() => {
+      const firstMatch = faqs.find(f => 
+        f.question.toLowerCase().includes(search.toLowerCase())
       );
 
-      if (!firstMatch) return;
-
-      const element = faqRefs.current[firstMatch.id];
-      smoothScrollTo(element, 800);
+      if(firstMatch) {
+        const element = faqRefs.current[firstMatch.id];
+        if(element) smoothScrollTo(element, 800);
+      }
     }, 400);
-
     return () => clearTimeout(timer);
-  }, [search, activeTag, visibleFaqs]);
+  }, [search, faqs]);
+
+  const visibleFaqs = faqs.filter( f =>
+    activeTag === "All" || f.tag === activeTag
+  );
 
   return (
     <div className="vins-page">
@@ -234,49 +280,74 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
                 color: "var(--vins-fg-muted)",
               }}
             >
-              {visibleFaqs.length} of {FAQS.length} shown
+              {visibleFaqs.length} of {faqs.length} shown
             </span>
           </div>
 
           {/* Tag Filters */}
           <div className="vins-tag-bar">
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                className={`vins-tag-filter-btn ${
-                  activeTag === tag ? "active" : ""
-                }`}
-                onClick={() => setActiveTag(tag)}
-              >
-                {tag}
-              </button>
-            ))}
+            {tags.map((tag) => {
+              const displayTag = tag === "All" ? "All" : tag.charAt(0).toUpperCase() + tag.slice(1);
+              const cssTag = tag === "All" ? "all" : tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  className={`vins-tag-filter-btn ${activeTag === tag ? "active" : ""}`}
+                  onClick={() => setActiveTag(tag)}
+                >
+                  {displayTag}
+                </button>
+              );
+            })}
           </div>
 
-          {/* FAQ List */}
-          {visibleFaqs.length > 0 ? (
-            <div className="vins-faq-stack">
-              {visibleFaqs.map((faq) => (
-                <FAQItem
-                  key={faq.id}
-                  faq={faq}
-                  search={search}
-                  innerRef={(el) => (faqRefs.current[faq.id] = el)}
-                />
-              ))}
+          {loading && (
+            <div 
+              style={{
+                textAlign: "center",
+                padding: "48px 0",
+                color: "var(--vins-fg-muted)"
+              }}
+            >
+              Loading FAQs...
             </div>
-          ) : (
-            <div
+          )}
+          {error && !loading && (
+            <div 
+              style={{
+                textAlign: "center",
+                padding: "48px 0",
+                color: "var(--vins-error)"
+              }}
+            >
+              {error}
+            </div>
+          )}
+          {!loading && !error && visibleFaqs.length === 0 && (
+            <div 
               style={{
                 textAlign: "center",
                 padding: "48px 0",
                 color: "var(--vins-fg-muted)",
-                fontSize: 14,
+                fontSize: 14
               }}
             >
-              No FAQs available.
+              No FAQs match your search
             </div>
           )}
+          {!loading && !error && visibleFaqs.length > 0 && (
+            <div className="vins-faq-stack">
+              {visibleFaqs.map(faq => (
+                <FAQItem
+                  key={faq.id}
+                  faq={faq}
+                  search={search}
+                  innerRef={(el) => (faqRefs.current[faq.id] = el )}
+                />
+              ))}
+            </div>
+          )}
+
 
           {/* CTA */}
           <div className="vins-cta-strip">
@@ -300,7 +371,7 @@ export default function HomePage({ onNavigate, onRequestLogin, user, dark, onTog
         </div>
       </main>
 
-      {chatOpen && <ChatBot onClose={() => setChatOpen(false)} />}
+      {chatOpen && <ChatBot onClose={() => setChatOpen(false)} onNavigate={onNavigate} />}
     </div>
   );
 }
