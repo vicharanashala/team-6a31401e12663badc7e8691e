@@ -3,13 +3,21 @@ const mongoose = require('mongoose');
 const questionSchema = new mongoose.Schema({
     
     // QUESTION TEXT
-    question : {
+    title : {
         type : String,
-        required : [true, 'Question is required'],
+        required : [true, 'Question title is required'],
         trim : true,
         unique : true,
         minlength : [10, 'Title must be atleast 10 characters long'],
         maxlength : [500, 'Title cannot exceed 500 characters'],
+        index : true
+    },
+    
+    description: {
+        type: String,
+        trim: true,
+        default: '',
+        maxlength: [800, 'Description cannot exceed 800 characters']
     },
 
     // USER ID - WHO POSTED QUESTION
