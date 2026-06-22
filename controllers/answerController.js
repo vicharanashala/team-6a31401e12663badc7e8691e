@@ -30,9 +30,12 @@ const createAnswer = async (req, res) => {
             question_id: req.params.questionId
         });
 
+        const populated = await Answer.findById(newAnswer._id)
+            .populate('user_id', 'name');
+
         res.status(201).json({
             success : true,
-            data : newAnswer
+            data : populated
         });
     } catch (error) {
         res.status(500).json({
@@ -50,7 +53,7 @@ const getAnswersByQuestion = async (req, res) => {
         const answers = await Answer.find({
             question_id: req.params.questionId
         })
-        .populate('user_id', 'username')
+        .populate('user_id', 'name')
         .sort({ up_votes: -1, created_at: -1 });
 
         res.status(200).json({
@@ -76,6 +79,7 @@ const getAnswersByUser = async (req, res) => {
             user_id : req.params.userId
         })
         .populate('question_id', 'title')
+        .populate('user_id', 'name')
         .sort({ created_at: -1 });
 
         res.status(200).json({
@@ -122,8 +126,8 @@ const updateAnswer = async (req, res) => {
         const updatedAnswer = await Answer.findByIdAndUpdate(
             req.params.id,
             updateData,
-            {new : true, 
-            runValidators : true}
+            {new : true, runValidators : true}
+            .populate('user_id', 'name');
         );
 
         res.status(200).json({
@@ -257,7 +261,7 @@ const upvoteAnswer = async (req, res) => {
                 $addToSet: { upvoted_by: req.user_id }
             },
             { new: true }
-        );
+        ).populate('user_id', 'name');
 
         res.status(200).json({
             success : true,
@@ -301,7 +305,7 @@ const downvoteAnswer = async (req, res) => {
                 $addToSet: { downvoted_by: req.user_id }
             },
             { new: true }
-        );
+        ).populate('user_id', 'name');
 
         res.status(200).json({
             success : true,
