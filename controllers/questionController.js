@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Question = require('../models/questionModel');
 const Answer = require('../models/answerModel');
 const Tag = require('../models/tagModel');
@@ -86,8 +87,15 @@ const getQuestionsByUser = async (req, res) => {
         // FIND ALL QUESTIONS POSTED BY SPECIFIC USER
         const userId = req.params.userId;
 
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success : false,
+                message : 'Invalid user ID'
+            });
+        }
+
         const questions = await Question.aggregate([
-             { $match: { user_id: userId } },
+             { $match: { user_id: new mongoose.Types.ObjectId(userId) } },
              {
                 $lookup: {
                     from: 'answers',
@@ -132,6 +140,13 @@ const getQuestionsByTag = async (req, res) => {
     try {
         const tagId = req.params.tagId;
 
+         if (!mongoose.Types.ObjectId.isValid(tagId)) {
+            return res.status(400).json({
+                success : false,
+                message : 'Invalid tag ID'
+            });
+        }
+
         const tag = await Tag.findById(tagId);
         if (!tag) {
             return res.status(404).json({
@@ -142,7 +157,7 @@ const getQuestionsByTag = async (req, res) => {
         
         // FIND QUESTIONS HAVING THIS TAG
         const questions = await Question.aggregate([
-            { $match: { tag_id: tagId } },
+            { $match: { tag_id: new mongoose.Types.ObjectId(tagId) } },
             {
                 $lookup: {
                     from: 'answers',

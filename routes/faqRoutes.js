@@ -13,13 +13,19 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // PUBLIC ROUTES
 router.get('/', getAllFAQs);
-router.get('/:id', getFAQById);
 router.get('/search', searchFAQs);
+
+// PROTECTED ROUTES
+router.get('/admin/ready-questions', protect, authorize('admin'), getQuestionsReadyForFAQ);
+router.post('/convert/:questionId', protect, authorize('admin'), convertToFAQ);
+
+// PUBLIC ROUTES
+router.get('/:id', getFAQById);
 
 // PROTECTED ROUTES
 router.put('/:id', protect, authorize('admin'), updateFAQ);
 router.delete('/:id', protect, authorize('admin'), deleteFAQ);
-router.post('/convert/:questionId', protect, authorize('admin'), convertToFAQ);
-router.get('/admin/ready-questions', protect, authorize('admin'), getQuestionsReadyForFAQ);
+
+
 
 module.exports = router;
