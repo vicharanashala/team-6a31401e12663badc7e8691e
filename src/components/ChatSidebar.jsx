@@ -48,7 +48,7 @@ export default function ChatBot({ onClose, onNavigate }) {
 
       if(results && results.length > 0) {
         const best = results[0];
-        botText = `I found this answer:\n\n**Q:** ${best.question}\n**A:**${best.answer}`;
+        botText = `I found this answer:\n\n**Question:**${best.question}\n\n**Answer:**${best.answer}`;
       } else {
         botText = "I couldn't find an exact answer in the FAQ database. Would you like to post your question in the Discussion board so the community can help?";
         showRedirect = true;

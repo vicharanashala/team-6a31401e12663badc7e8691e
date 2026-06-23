@@ -29,6 +29,20 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
 
   const [actionMessage, setActionMessage] = useState("");
 
+  const [processedDecisions, setProcessedDecisions] = useState(() => {
+    const stored = localStorage.getItem('admin_processed');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const today = new Date().toDateString();
+        return parsed.filter(item => new Date(item.timestamp).toDateString() === today);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   function showMessage(text) {
     setActionMessage(text);
     setTimeout(() => setActionMessage(""), 3000);
@@ -48,12 +62,14 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
           id: item._id,
           title: item.title,
           body: item.description || '',
-          upvotes: item.bestAnswerVotes || 0,
+          upvotes: item.up_votes || 0,
           author: item.author || 'Unknown',
           tags: item.tags || (item.tag ? [item.tag] : []),
           topAnswer: item.topAnswer || ''
       }));
-      setCandidates(mapped);
+      const processedIds = processedDecisions.map(p => p.id);
+      const filtered = mapped.filter(item => !processedIds.includes(item.id));
+      setCandidates(filtered);
     } catch (err) {
       showMessage("Failed to load FAQ candidates : " + err.message);
       setCandidates([]);
@@ -66,6 +82,11 @@ export default function AdminPage({ onNavigate, user, onLogout, dark, onToggleTh
     const removed = candidates.find(c => c.id === id);
     setCandidates(prev => prev.filter(c => c.id !== id));
     setProcessedCandidates(prev => [...prev, { ...removed, status : decision }]);
+
+    const processedItem = { ...removed, status: decision, timestamp: Date.now() };
+    const updatedProcessed = [...processedDecisions, processedItem];
+    setProcessedDecisions(updatedProcessed);
+    localStorage.setItem('admin_processed', JSON.stringify(updatedProcessed));
 
     if(decision === "approved") {
       try {

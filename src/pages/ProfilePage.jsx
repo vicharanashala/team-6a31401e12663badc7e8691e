@@ -6,11 +6,24 @@ import { userAPI, questionAPI, answerAPI } from "../services/api";
 import "../styles/ProfilePage.css";
 
 const BADGES = [
-  { label: "First Answer", icon: "✦", earned: true },
-  { label: "Top 10%", icon: "◆", earned: true },
-  { label: "Helpful Voice", icon: "▲", earned: true },
-  { label: "Century", icon: "●", earned: false }
+  { id: "firstQuestion", label: "First Question", icon: "❓", check: (stats) => stats.totalQuestions >= 1 },
+  { id: "firstAnswer", label: "First Answer", icon: "✏️", check: (stats) => stats.totalAnswers >= 1 },
+  { id: "risingStar", label: "Rising Star", icon: "⭐", check: (stats) => stats.totalUpvotes >= 25 },
+  { id: "helpfulVoice", label: "Helpful Voice", icon: "🎤", check: (stats) => stats.totalUpvotes >= 75 },
+  { id: "century", label: "Century", icon: "💯", check: (stats) => stats.totalUpvotes >= 100 },
+  { id: "questionMaster", label: "Question Master", icon: "📚", check: (stats) => stats.totalQuestions >= 15 },
+  { id: "answerAce", label: "Answer Ace", icon: "🏆", check: (stats) => stats.totalAnswers >= 25 },
+  { id: "topContributor", label: "Top Contributor", icon: "🌟", check: (stats) => (stats.totalQuestions + stats.totalAnswers) >= 50 },
 ];
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "Unknown";
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState("answers");
@@ -58,7 +71,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
 
         const mappedQuestions = questionsData.map(q => ({
           id : q._id,
-          title : q.question,
+          title : q.title,
           answers : q.answers_count || 0,
           time : q.created_at,
           tags : q.tag_id ? [q.tag_id.tag_name] : []
@@ -81,6 +94,10 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
     };
     fetchUserData();
   }, [userId]);
+
+  const upvotes = useCountUp(stats?.totalUpvotes || 0);
+  const questions = useCountUp(stats?.totalQuestions || 0);
+  const answers = useCountUp(stats?.totalAnswers || 0);
 
   if(loading) {
     return (
@@ -129,9 +146,10 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
     );
   }
 
-  const upvotes = useCountUp(stats?.totalUpvotes || 0);
-  const questions = useCountUp(stats?.totalQuestions || 0);
-  const answers = useCountUp(stats?.totalAnswers || 0);
+  const badgeData = BADGES.map((def) => ({
+    ...def,
+    earned: def.check(stats)
+  }));
 
   return (
     <div className="profile-page">
@@ -166,7 +184,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
             <h1 className="profile-card__name">{profile.name}</h1>
             <p className="profile-card__handle">{profile.handle}</p>
             <p className="profile-card__bio">{profile.bio}</p>
-            <p className="profile-card__joined">JOINED {profile.joined.toUpperCase()}</p>
+            <p className="profile-card__joined">JOINED {formatDate(profile.joined)}</p>
           </div>
         </div>
 
@@ -199,7 +217,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
         <div className="badges-section">
           <p className="badges-section__title">BADGES</p>
           <div className="badges-section__list">
-            {BADGES.map((b) => (
+            {badgeData.map((b) => (
               <div
                 key={b.label}
                 className={`badge ${b.earned ? "badge--earned" : "badge--locked"}`}
@@ -239,7 +257,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
                   <div className="answer-item__content">
                     <p className="answer-item__question">{ans.question}</p>
                     <p className="answer-item__excerpt">{ans.excerpt}</p>
-                    <p className="answer-item__time">{ans.time}</p>
+                    <p className="answer-item__time">{formatDate(ans.time)}</p>
                   </div>
                 </div>
               ))
@@ -264,7 +282,7 @@ export default function ProfilePage({ onNavigate, user, onLogout, dark, onToggle
                       <MessageSquare className="question-item__icon" />
                       {q.answers} answers
                     </span>
-                    <span className="question-item__time">{q.time}</span>
+                    <span className="question-item__time">{formatDate(q.time)}</span>
                   </div>
                 </div>
               ))

@@ -4,6 +4,15 @@ import ThemeToggle from "../components/ThemeToggle";
 import "../styles/DiscussionPage.css";
 import { questionAPI, answerAPI, tagAPI } from "../services/api";
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return "Unknown";
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 function getHeatClass(upvotes) {
   if (upvotes >= 20) return "question-card--hot";
   if (upvotes >= 10) return "question-card--warm";
@@ -23,6 +32,7 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
   const [newBody, setNewBody] = useState("");
   const [newTags, setNewTags] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTagId, setSelectedTagId] = useState(null);
   const [answerText, setAnswerText] = useState({});
   const [sortBy, setSortBy] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);
@@ -38,8 +48,8 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
     const fetchTags = async () => {
       try {
         const data = await tagAPI.getAll();
-        const tagNames = data.map(t => t.tag_name);
-        setAvailableTags(tagNames);
+        //const tagNames = data.map(t => t.tag_name);
+        setAvailableTags(data);
       } catch (err) {
         console.error("Failed to load Tags : ", err);
         setAvailableTags([]);
@@ -59,10 +69,11 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
           id : q._id,
           author : q.user_id?.name || "Anonymous",
           avatar : q.user_id?.name?.charAt(0)?.toUpperCase() || "?",
-          title : q.question,
+          title : q.title || q.question || "Untitled",
           body : q.description || "",
           tags : q.tag_id ? [q.tag_id.tag_name] : [],
           time : q.created_at,
+          timestamp: new Date(q.created_at).getTime(),
           upvotes : q.up_votes || 0,
           downvotes : q.down_votes || 0,
           uservote : null,
@@ -82,11 +93,13 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
 
   function getSorted() {
     const qs = [...questions];
-    if (sortBy === "upvotes")
-      return qs.sort((a, b) => b.upvotes - a.upvotes);
-    if (sortBy === "downvotes")
-      return qs.sort((a, b) => b.downvotes - a.downvotes);
-    return qs.sort((a, b) => b.id < a.id ? 1 : -1);
+    if (sortBy === "upvotes") {
+      return qs.sort((a, b) => b.upvotes - a.upvotes || b.timestamp - a.timestamp);
+    }
+    if (sortBy === "downvotes") {
+      return qs.sort((a, b) => b.downvotes - a.downvotes || b.timestamp - a.timestamp);
+    }
+    return qs.sort((a, b) => b.timestamp - a.timestamp);
   }
 
   async function toggleExpand(id) {
@@ -234,9 +247,9 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
     if(!newTitle.trim()) return;
 
     const newQuestion = {
-      question : newTitle.trim(),
+      title : newTitle.trim(),
       description : newBody.trim(),
-      tag_id : newTags.length ? newTags[0] : null
+      tag_id : selectedTagId || null
     };
 
     const optimisticQ = {
@@ -247,6 +260,7 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
       body : newBody.trim(),
       tags : newTags,
       time : "just now",
+      timestamp: Date.now(),
       upvotes : 0,
       downvotes : 0,
       userVote : null,
@@ -266,10 +280,11 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
         id : data._id,
         author : data.user_id?.name || "you",
         avatar : data.user_id?.avatar || "YU",
-        title : data.question,
+        title : data.title,
         body : data.description || "",
         tags : data.tags || [],
         time : data.created_at,
+        timestamp: new Date(data.created_at).getTime(),
         upvotes : data.up_votes || 0,
         downvotes : data.down_votes || 0,
         userVote : null,
@@ -283,8 +298,8 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
     }
   }
 
-  function toggleTag(tag) {
-    setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  function toggleTag(tagId) {
+    setSelectedTagId(prev => prev === tagId ? null : tagId);
   }
 
   function triggerBurst(id) {
@@ -357,12 +372,12 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
                 <div className="tag-selector">
                   {availableTags.map((tag) => (
                     <button
-                      key={tag}
+                      key={tag._id}
                       type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`tag-selector__btn ${newTags.includes(tag) ? "tag-selector__btn--selected" : ""}`}
+                      onClick={() => toggleTag(tag._id)}
+                      className={`tag-selector__btn ${selectedTagId === tag._id ? "tag-selector__btn--selected" : ""}`}
                     >
-                      {tag}
+                      {tag.tag_name}
                     </button>
                   ))}
                 </div>
@@ -434,7 +449,7 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
                         {q.tags.map((tag) => (
                           <span key={tag} className="question-card__tag">{tag}</span>
                         ))}
-                        <span className="question-card__info">{q.author} · {q.time}</span>
+                        <span className="question-card__info">{q.author} · {formatDate(q.time)}</span>
                         <span className="question-card__answers-count">
                           <MessageSquare className="question-card__answers-icon" />
                           {q.answersCount || 0}
@@ -490,7 +505,7 @@ export default function DiscussionPage({ onNavigate, dark, onToggleTheme }) {
                                 </div>
                                 <div className="answer-item__content">
                                   <p className="answer-item__text">{ans.text}</p>
-                                  <p className="answer-item__meta">{ans.author} · {ans.time}</p>
+                                  <p className="answer-item__meta">{ans.author} · {formatDate(ans.time)}</p>
                                 </div>
                               </div>
                             ))}
